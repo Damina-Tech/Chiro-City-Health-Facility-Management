@@ -1,0 +1,316 @@
+/**
+ * Chiro City Health Facilities & HR Management - API client
+ */
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+function getToken(): string | null {
+  return localStorage.getItem('access_token');
+}
+
+function headers(includeAuth = true): HeadersInit {
+  const h: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  const token = getToken();
+  if (includeAuth && token) {
+    (h as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+  return h;
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(Array.isArray(err.message) ? err.message[0] : err.message || res.statusText);
+  }
+  if (res.status === 204 || res.headers.get('content-length') === '0') return undefined as T;
+  return res.json();
+}
+
+// Auth
+export const authApi = {
+  login: (email: string, password: string) =>
+    fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }).then((res) => handleResponse<{ access_token: string; user: AuthUser }>(res)),
+};
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  permissions: string[];
+}
+
+// Dashboard
+export const dashboardApi = {
+  getStats: () =>
+    fetch(`${API_BASE}/dashboard/stats`, { headers: headers() }).then((res) =>
+      handleResponse<{
+        totalFacilities: number;
+        totalStaff: number;
+        activeFacilities: number;
+        licenseExpiringCount: number;
+      }>(res),
+    ),
+};
+
+// Facilities
+export interface Facility {
+  id: string;
+  name: string;
+  type: string;
+  registrationNo: string | null;
+  licenseNo: string | null;
+  licenseExpiry: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  status: string;
+  services: string | null;
+  legalInfo: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { documents: number };
+  documents?: FacilityDocument[];
+  staffList?: Staff[];
+}
+
+export interface FacilityDocument {
+  id: string;
+  facilityId: string;
+  name: string;
+  type: string;
+  filePath: string;
+  mimeType: string;
+  sizeBytes: number | null;
+  uploadedAt: string;
+}
+
+export const facilitiesApi = {
+  list: (params?: { search?: string; status?: string; type?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set('search', params.search);
+    if (params?.status) q.set('status', params.status);
+    if (params?.type) q.set('type', params.type);
+    const query = q.toString();
+    return fetch(`${API_BASE}/facilities${query ? `?${query}` : ''}`, {
+      headers: headers(),
+    }).then((res) => handleResponse<Facility[]>(res));
+  },
+  get: (id: string) =>
+    fetch(`${API_BASE}/facilities/${id}`, { headers: headers() }).then((res) =>
+      handleResponse<Facility & { staffList: Staff[]; services: string[]; legalInfo: Record<string, unknown> | null }>(res),
+    ),
+  getStaff: (id: string) =>
+    fetch(`${API_BASE}/facilities/${id}/staff`, { headers: headers() }).then((res) =>
+      handleResponse<Staff[]>(res),
+    ),
+  create: (body: CreateFacilityDto) =>
+    fetch(`${API_BASE}/facilities`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then((res) => handleResponse<Facility>(res)),
+  update: (id: string, body: UpdateFacilityDto) =>
+    fetch(`${API_BASE}/facilities/${id}`, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then((res) => handleResponse<Facility>(res)),
+  delete: (id: string) =>
+    fetch(`${API_BASE}/facilities/${id}`, {
+      method: 'DELETE',
+      headers: headers(),
+    }).then((res) => handleResponse<{ deleted: boolean }>(res)),
+};
+
+export interface CreateFacilityDto {
+  name: string;
+  type: string;
+  registrationNo?: string;
+  licenseNo?: string;
+  licenseExpiry?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  status?: string;
+  services?: string[];
+  legalInfo?: Record<string, unknown>;
+}
+
+export type UpdateFacilityDto = Partial<CreateFacilityDto>;
+
+// Staff
+export interface Staff {
+  id: string;
+  employeeId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  department: string | null;
+  designation: string;
+  facilityId: string | null;
+  facility?: { id: string; name: string; type: string };
+  departmentName: string | null;
+  licenseNo: string | null;
+  licenseExpiry: string | null;
+  status: string;
+  joiningDate: string | null;
+  address: string | null;
+  emergencyContact: string | null;
+  createdAt: string;
+  updatedAt: string;
+  documents?: StaffDocument[];
+}
+
+export interface StaffDocument {
+  id: string;
+  staffId: string;
+  name: string;
+  type: string;
+  filePath: string;
+  mimeType: string;
+  sizeBytes: number | null;
+  uploadedAt: string;
+}
+
+export interface CreateStaffDto {
+  employeeId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  department?: string;
+  designation: string;
+  facilityId?: string;
+  departmentName?: string;
+  licenseNo?: string;
+  licenseExpiry?: string;
+  status?: string;
+  joiningDate?: string;
+  address?: string;
+  emergencyContact?: string;
+}
+
+export type UpdateStaffDto = Partial<CreateStaffDto>;
+
+export const staffApi = {
+  list: (params?: { search?: string; status?: string; facilityId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set('search', params.search);
+    if (params?.status) q.set('status', params.status);
+    if (params?.facilityId) q.set('facilityId', params.facilityId);
+    const query = q.toString();
+    return fetch(`${API_BASE}/staff${query ? `?${query}` : ''}`, {
+      headers: headers(),
+    }).then((res) => handleResponse<Staff[]>(res));
+  },
+  get: (id: string) =>
+    fetch(`${API_BASE}/staff/${id}`, { headers: headers() }).then((res) =>
+      handleResponse<Staff>(res),
+    ),
+  licenseExpiring: (days?: number) =>
+    fetch(`${API_BASE}/staff/license-expiring${days != null ? `?days=${days}` : ''}`, {
+      headers: headers(),
+    }).then((res) => handleResponse<Staff[]>(res)),
+  create: (body: CreateStaffDto) =>
+    fetch(`${API_BASE}/staff`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then((res) => handleResponse<Staff>(res)),
+  update: (id: string, body: UpdateStaffDto) =>
+    fetch(`${API_BASE}/staff/${id}`, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then((res) => handleResponse<Staff>(res)),
+  delete: (id: string) =>
+    fetch(`${API_BASE}/staff/${id}`, {
+      method: 'DELETE',
+      headers: headers(),
+    }).then((res) => handleResponse<{ deleted: boolean }>(res)),
+};
+
+// Documents (upload uses FormData)
+export const documentsApi = {
+  facility: {
+    list: (facilityId: string) =>
+      fetch(`${API_BASE}/documents/facility/${facilityId}`, { headers: headers() }).then((res) =>
+        handleResponse<FacilityDocument[]>(res),
+      ),
+    upload: (facilityId: string, file: File, name?: string, type?: string) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (name) form.append('name', name);
+      if (type) form.append('type', type);
+      return fetch(`${API_BASE}/documents/facility/${facilityId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      }).then((res) => handleResponse<FacilityDocument>(res));
+    },
+    delete: (id: string) =>
+      fetch(`${API_BASE}/documents/facility/doc/${id}`, {
+        method: 'DELETE',
+        headers: headers(),
+      }).then((res) => handleResponse<{ deleted: boolean }>(res)),
+  },
+  staff: {
+    list: (staffId: string) =>
+      fetch(`${API_BASE}/documents/staff/${staffId}`, { headers: headers() }).then((res) =>
+        handleResponse<StaffDocument[]>(res),
+      ),
+    upload: (staffId: string, file: File, name?: string, type?: string) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (name) form.append('name', name);
+      if (type) form.append('type', type);
+      return fetch(`${API_BASE}/documents/staff/${staffId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      }).then((res) => handleResponse<StaffDocument>(res));
+    },
+    delete: (id: string) =>
+      fetch(`${API_BASE}/documents/staff/doc/${id}`, {
+        method: 'DELETE',
+        headers: headers(),
+      }).then((res) => handleResponse<{ deleted: boolean }>(res)),
+  },
+};
+
+// Notifications
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  channel: string;
+  recipient: string | null;
+  sentAt: string | null;
+  readAt: string | null;
+  metadata: string | null;
+  createdAt: string;
+}
+
+export const notificationsApi = {
+  list: (params?: { type?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.type) q.set('type', params.type);
+    if (params?.limit != null) q.set('limit', String(params.limit));
+    const query = q.toString();
+    return fetch(`${API_BASE}/notifications${query ? `?${query}` : ''}`, {
+      headers: headers(),
+    }).then((res) => handleResponse<Notification[]>(res));
+  },
+  markRead: (id: string) =>
+    fetch(`${API_BASE}/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: headers(),
+    }).then((res) => handleResponse<Notification>(res)),
+};

@@ -1,0 +1,19 @@
+/**
+ * Status workflow: DRAFT → SUBMITTED → APPROVED → ACTIVE | INACTIVE → SUSPENDED → TERMINATED
+ */
+export const ENTITY_STATUS = {
+  DRAFT: 'DRAFT',
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED',
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  TERMINATED: 'TERMINATED',
+} as const;
+
+export const FACILITY_TYPES = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY'] as const;
+
+export const ROLES = {
+  ADMIN: 'Admin',
+  OFFICER: 'Officer',
+} as const;
