@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { PERMISSIONS } from '@/constants/permissions';
 import { staffApi, facilitiesApi, type Staff, type CreateStaffDto } from '@/services/api';
 import {
   Users,
@@ -64,9 +65,14 @@ export default function StaffPage() {
   });
   const [submitError, setSubmitError] = useState('');
 
-  const canEdit = hasPermission('facilities.*') || hasPermission('staff.*') || hasPermission('dashboard.view');
+  const canRead = hasPermission(PERMISSIONS.STAFF_READ);
+  const canCreate = hasPermission(PERMISSIONS.STAFF_CREATE);
+  const canUpdate = hasPermission(PERMISSIONS.STAFF_UPDATE);
+  const canDelete = hasPermission(PERMISSIONS.STAFF_DELETE);
+  const canEdit = canCreate || canUpdate;
 
   const loadStaff = () => {
+    if (!canRead) return;
     setLoading(true);
     staffApi
       .list({
@@ -81,7 +87,7 @@ export default function StaffPage() {
 
   useEffect(() => {
     loadStaff();
-  }, [searchTerm, statusFilter, facilityFilter]);
+  }, [canRead, searchTerm, statusFilter, facilityFilter]);
 
   useEffect(() => {
     facilitiesApi.list().then((list) => setFacilities(list.map((f) => ({ id: f.id, name: f.name }))));
@@ -186,6 +192,17 @@ export default function StaffPage() {
   const getInitials = (name: string) =>
     name.split(' ').map((n) => n[0]).join('').toUpperCase();
 
+  if (!canRead) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
+          <p className="font-medium">No access</p>
+          <p className="text-sm mt-1">You don&apos;t have permission to view staff.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -193,7 +210,7 @@ export default function StaffPage() {
           <h1 className="text-3xl font-bold text-gray-900">Staff</h1>
           <p className="text-gray-600 mt-1">Manage health facility staff</p>
         </div>
-        {canEdit && (
+        {canCreate && (
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Add Staff
@@ -331,22 +348,20 @@ export default function StaffPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {canEdit && (
-                            <>
-                              <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              {hasPermission('facilities.*') && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-600"
-                                  onClick={() => handleDelete(s.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </>
+                          {canUpdate && (
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600"
+                              onClick={() => handleDelete(s.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>

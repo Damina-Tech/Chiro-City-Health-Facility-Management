@@ -10,8 +10,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { PERMISSIONS } from '../common/constants';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
@@ -23,13 +24,15 @@ export class StaffController {
   constructor(private staffService: StaffService) {}
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('Admin', 'Officer')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.STAFF_CREATE)
   create(@Body() dto: CreateStaffDto, @CurrentUser() user: JwtPayload) {
     return this.staffService.create(dto, user?.sub);
   }
 
   @Get()
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.STAFF_READ)
   findAll(
     @Query('search') search?: string,
     @Query('status') status?: string,
@@ -39,6 +42,8 @@ export class StaffController {
   }
 
   @Get('license-expiring')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.STAFF_READ)
   findLicenseExpiring(@Query('days') days?: string) {
     return this.staffService.findLicenseExpiringWithin(
       days ? parseInt(days, 10) : 30,
@@ -46,13 +51,15 @@ export class StaffController {
   }
 
   @Get(':id')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.STAFF_READ)
   findOne(@Param('id') id: string) {
     return this.staffService.findOne(id);
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard)
-  @Roles('Admin', 'Officer')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.STAFF_UPDATE)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateStaffDto,
@@ -62,8 +69,8 @@ export class StaffController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.STAFF_DELETE)
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.staffService.remove(id, user?.sub);
   }

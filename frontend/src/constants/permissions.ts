@@ -1,26 +1,6 @@
 /**
- * Status workflow: DRAFT → SUBMITTED → APPROVED → ACTIVE | INACTIVE → SUSPENDED → TERMINATED
- */
-export const ENTITY_STATUS = {
-  DRAFT: 'DRAFT',
-  SUBMITTED: 'SUBMITTED',
-  APPROVED: 'APPROVED',
-  ACTIVE: 'ACTIVE',
-  INACTIVE: 'INACTIVE',
-  SUSPENDED: 'SUSPENDED',
-  TERMINATED: 'TERMINATED',
-} as const;
-
-export const FACILITY_TYPES = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY'] as const;
-
-export const ROLES = {
-  ADMIN: 'Admin',
-  OFFICER: 'Officer',
-} as const;
-
-/**
- * RBAC: Permission names used for guards and seed.
- * Use RequirePermissions('permission.name') on routes; user must have exact or wildcard (e.g. facilities.*).
+ * RBAC permission names. Must match backend PERMISSIONS (common/constants.ts).
+ * Use with useAuth().hasPermission(PERMISSIONS.DASHBOARD_VIEW) etc.
  */
 export const PERMISSIONS = {
   DASHBOARD_VIEW: 'dashboard.view',
@@ -47,5 +27,4 @@ export const PERMISSIONS = {
   NOTIFICATIONS_MARK_READ: 'notifications.markRead',
 } as const;
 
-/** All permission values for seed (Admin gets these). */
-export const ALL_PERMISSIONS = Object.values(PERMISSIONS);
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

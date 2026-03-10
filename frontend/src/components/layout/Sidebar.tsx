@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { PERMISSIONS } from '@/constants/permissions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -34,19 +35,19 @@ const menuItems = [
   title: 'Dashboard',
   icon: BarChart3,
   href: '/dashboard',
-  permission: 'dashboard.view'
+  permission: PERMISSIONS.DASHBOARD_VIEW
 },
 {
   title: 'Facilities',
   icon: Building2,
   href: '/facilities',
-  permission: 'dashboard.view'
+  permission: PERMISSIONS.FACILITIES_READ
 },
 {
   title: 'Staff',
   icon: Users,
   href: '/staff',
-  permission: 'dashboard.view'
+  permission: PERMISSIONS.STAFF_READ
 },
 {
   title: 'Employees',

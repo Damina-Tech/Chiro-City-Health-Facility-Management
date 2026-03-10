@@ -96,10 +96,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('hrms_user');
   };
 
+  /**
+   * Returns true if user has the required permission.
+   * Supports: exact match, wildcard "*" or "admin", and resource wildcard (e.g. facilities.* covers facilities.create).
+   */
   const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
-    if (user.permissions?.includes('*')) return true;
-    return user.permissions?.includes(permission) ?? false;
+    if (!user?.permissions?.length) return false;
+    const perms = user.permissions;
+    if (perms.includes('*') || perms.includes('admin')) return true;
+    if (perms.includes(permission)) return true;
+    const [resource, action] = permission.split('.');
+    if (action && perms.includes(`${resource}.*`)) return true;
+    return false;
   };
 
   const value = {

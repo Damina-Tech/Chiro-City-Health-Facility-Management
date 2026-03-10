@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { PERMISSIONS } from '@/constants/permissions';
 import { staffApi, documentsApi, type Staff, type StaffDocument } from '@/services/api';
 import {
   ArrowLeft,
@@ -38,19 +39,24 @@ export default function StaffProfilePage() {
   const [uploadType, setUploadType] = useState('other');
   const [uploading, setUploading] = useState(false);
 
-  const canUpload = hasPermission('facilities.*') || hasPermission('staff.*') || hasPermission('documents.*');
+  const canReadStaff = hasPermission(PERMISSIONS.STAFF_READ);
+  const canUpload = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_UPLOAD);
+  const canListDocs = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_READ);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !canReadStaff) return;
     setLoading(true);
-    Promise.all([staffApi.get(id), documentsApi.staff.list(id)])
+    Promise.all([
+      staffApi.get(id),
+      canListDocs ? documentsApi.staff.list(id) : Promise.resolve([]),
+    ])
       .then(([s, docs]) => {
         setStaff(s);
         setDocuments(docs);
       })
       .catch(() => setStaff(null))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, canReadStaff, canListDocs]);
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +86,15 @@ export default function StaffProfilePage() {
     };
     return map[status] || 'bg-gray-100 text-gray-800';
   };
+
+  if (!canReadStaff) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
+        <p className="font-medium">No access</p>
+        <p className="text-sm mt-1">You don&apos;t have permission to view this staff member.</p>
+      </div>
+    );
+  }
 
   if (loading || !staff) {
     return (
@@ -178,7 +193,9 @@ export default function StaffProfilePage() {
               )}
             </CardHeader>
             <CardContent>
-              {documents.length === 0 ? (
+              {!canListDocs && !canUpload ? (
+                <p className="text-gray-500 text-sm">No access to documents.</p>
+              ) : documents.length === 0 ? (
                 <p className="text-gray-500 text-sm">No documents uploaded.</p>
               ) : (
                 <ul className="space-y-2">

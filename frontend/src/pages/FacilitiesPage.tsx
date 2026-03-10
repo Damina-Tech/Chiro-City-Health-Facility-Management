@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { PERMISSIONS } from '@/constants/permissions';
 import { facilitiesApi, type Facility, type CreateFacilityDto } from '@/services/api';
 import {
   Building2,
@@ -61,9 +62,14 @@ export default function FacilitiesPage() {
   });
   const [submitError, setSubmitError] = useState('');
 
-  const canEdit = hasPermission('facilities.*') || hasPermission('dashboard.view');
+  const canRead = hasPermission(PERMISSIONS.FACILITIES_READ);
+  const canCreate = hasPermission(PERMISSIONS.FACILITIES_CREATE);
+  const canUpdate = hasPermission(PERMISSIONS.FACILITIES_UPDATE);
+  const canDelete = hasPermission(PERMISSIONS.FACILITIES_DELETE);
+  const canEdit = canCreate || canUpdate;
 
   const load = () => {
+    if (!canRead) return;
     setLoading(true);
     facilitiesApi
       .list({
@@ -78,7 +84,7 @@ export default function FacilitiesPage() {
 
   useEffect(() => {
     load();
-  }, [searchTerm, statusFilter, typeFilter]);
+  }, [canRead, searchTerm, statusFilter, typeFilter]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -161,6 +167,17 @@ export default function FacilitiesPage() {
     return map[status] || 'bg-gray-100 text-gray-800';
   };
 
+  if (!canRead) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
+          <p className="font-medium">No access</p>
+          <p className="text-sm mt-1">You don&apos;t have permission to view facilities.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -168,7 +185,7 @@ export default function FacilitiesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Health Facilities</h1>
           <p className="text-gray-600 mt-1">Manage facilities and view details</p>
         </div>
-        {canEdit && (
+        {canCreate && (
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Add Facility
@@ -296,22 +313,20 @@ export default function FacilitiesPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {canEdit && (
-                            <>
-                              <Button variant="ghost" size="sm" onClick={() => openEdit(f)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              {hasPermission('facilities.*') && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-600"
-                                  onClick={() => handleDelete(f.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </>
+                          {canUpdate && (
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(f)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600"
+                              onClick={() => handleDelete(f.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>

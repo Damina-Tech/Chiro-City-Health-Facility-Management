@@ -1,5 +1,8 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { PERMISSIONS } from '../common/constants';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('dashboard')
@@ -8,6 +11,8 @@ export class DashboardController {
   constructor(private prisma: PrismaService) {}
 
   @Get('stats')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.DASHBOARD_VIEW)
   async getStats() {
     const [totalFacilities, totalStaff, activeFacilities, licenseExpiringCount] =
       await Promise.all([
