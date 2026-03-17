@@ -1,8 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { ROLES } from '../common/constants';
 import { CreateFacilityDto } from './dto/create-facility.dto';
 import { UpdateFacilityDto } from './dto/update-facility.dto';
+
+/** Officer can only set facility status to these values; Admin can set any status. */
+const OFFICER_ALLOWED_STATUSES = new Set<string>(['DRAFT', 'PENDING', 'SUBMITTED']);
 
 @Injectable()
 export class FacilitiesService {
@@ -61,7 +65,13 @@ export class FacilitiesService {
     };
   }
 
-  async create(dto: CreateFacilityDto, userId?: string) {
+  async create(dto: CreateFacilityDto, userId?: string, userRole?: string) {
+    const status = dto.status || 'DRAFT';
+    if (userRole === ROLES.OFFICER && !OFFICER_ALLOWED_STATUSES.has(status)) {
+      throw new ForbiddenException(
+        'Officer can only register facilities with status DRAFT, PENDING, or SUBMITTED. Use SUBMITTED for approval request.',
+      );
+    }
     const facility = await this.prisma.facility.create({
       data: this.mapCreateDtoToData(dto, userId),
     });
@@ -128,9 +138,15 @@ export class FacilitiesService {
     });
   }
 
-  async update(id: string, dto: UpdateFacilityDto, userId?: string) {
+  async update(id: string, dto: UpdateFacilityDto, userId?: string, userRole?: string) {
     const existing = await this.prisma.facility.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Facility not found');
+
+    if (dto.status !== undefined && userRole === ROLES.OFFICER && !OFFICER_ALLOWED_STATUSES.has(dto.status)) {
+      throw new ForbiddenException(
+        'Officer can only set facility status to DRAFT, PENDING, or SUBMITTED. Only Admin can approve or activate.',
+      );
+    }
 
     const data: any = {};
     if (dto.name !== undefined) data.name = dto.name;

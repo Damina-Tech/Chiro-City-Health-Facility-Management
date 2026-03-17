@@ -32,12 +32,15 @@ import {
   Upload,
   Users,
   Calendar,
+  RefreshCw,
 } from 'lucide-react';
+import { FacilityStatusUpdateDialog } from '@/components/facilities/FacilityStatusUpdateDialog';
 
 export default function FacilityProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [facility, setFacility] = useState<
     (Facility & { staffList?: Staff[]; services?: string[]; specificFields?: FacilitySpecificFields | null }) | null
   >(null);
@@ -50,8 +53,14 @@ export default function FacilityProfilePage() {
   const [uploading, setUploading] = useState(false);
 
   const canReadFacility = hasPermission(PERMISSIONS.FACILITIES_READ);
+  const canUpdateFacility = hasPermission(PERMISSIONS.FACILITIES_UPDATE);
   const canUpload = hasPermission(PERMISSIONS.DOCUMENTS_FACILITY_UPLOAD);
   const canListDocs = hasPermission(PERMISSIONS.DOCUMENTS_FACILITY_READ);
+
+  const refetchFacility = () => {
+    if (!id) return;
+    facilitiesApi.get(id).then(setFacility).catch(() => setFacility(null));
+  };
 
   useEffect(() => {
     if (!id || !canReadFacility) return;
@@ -127,14 +136,37 @@ export default function FacilityProfilePage() {
         <Button variant="ghost" size="icon" onClick={() => navigate('/facilities')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-gray-900">{facility.name}</h1>
           <p className="text-gray-600 flex items-center gap-2 mt-1">
             <Badge className={getStatusColor(facility.status)}>{facility.status}</Badge>
             <Badge variant="outline">{facility.type}</Badge>
+            {canUpdateFacility && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setStatusDialogOpen(true)}
+                title="Update status"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                Change status
+              </Button>
+            )}
           </p>
         </div>
       </div>
+
+      {canUpdateFacility && (
+        <FacilityStatusUpdateDialog
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          facilityId={facility.id}
+          facilityName={facility.name}
+          currentStatus={facility.status}
+          onSuccess={refetchFacility}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

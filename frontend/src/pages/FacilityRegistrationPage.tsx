@@ -44,9 +44,6 @@ const OWNERSHIP_OPTIONS = [
   { value: 'NGO', label: 'NGO' },
   { value: 'CHARITY', label: 'Charity' },
 ];
-const STATUS_OPTIONS = [
-  'DRAFT', 'PENDING', 'SUBMITTED', 'APPROVED', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'TERMINATED',
-];
 const CLINIC_CATEGORIES = [{ value: 'GENERAL', label: 'General' }, { value: 'SPECIALIZED', label: 'Specialized' }];
 const CLINIC_SPECIALIZATIONS = ['Dental', 'Eye', 'Pediatrics', 'Dermatology', 'Orthopedic', 'Other'];
 const PHARMACY_TYPES = [
@@ -144,7 +141,9 @@ export default function FacilityRegistrationPage() {
         try {
           if (typeof f.specificFields === 'object' && f.specificFields) specificFields = f.specificFields;
           else if (typeof f.specificFields === 'string' && f.specificFields) specificFields = JSON.parse(f.specificFields);
-        } catch {}
+        } catch {
+          // leave specificFields as {}
+        }
         setForm({
           name: f.name,
           type: f.type,
@@ -388,21 +387,11 @@ export default function FacilityRegistrationPage() {
           )}
 
           {step === 5 && (
-            <>
-              <div>
-                <Label>Operating Hours</Label>
-                <Input value={form.operatingHours ?? ''} onChange={(e) => setForm((p) => ({ ...p, operatingHours: e.target.value }))} placeholder="e.g. 08:00-18:00 Mon-Sat" />
-              </div>
-              <div>
-                <Label>Facility Status</Label>
-                <Select value={form.status ?? 'DRAFT'} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
+            <div>
+              <Label>Operating Hours</Label>
+              <Input value={form.operatingHours ?? ''} onChange={(e) => setForm((p) => ({ ...p, operatingHours: e.target.value }))} placeholder="e.g. 08:00-18:00 Mon-Sat" />
+              <p className="text-xs text-muted-foreground mt-2">To change facility status, use &quot;Change status&quot; on the facility profile or the status action on the list.</p>
+            </div>
           )}
 
           {step === 6 && hasSpecificStep && form.type === 'HOSPITAL' && (

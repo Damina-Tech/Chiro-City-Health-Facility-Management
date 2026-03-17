@@ -20,6 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { FacilityStatusUpdateDialog } from '@/components/facilities/FacilityStatusUpdateDialog';
 import { PERMISSIONS } from '@/constants/permissions';
 import { facilitiesApi, type Facility } from '@/services/api';
 import {
@@ -31,6 +42,7 @@ import {
   Eye,
   Phone,
   Mail,
+  RefreshCw,
 } from 'lucide-react';
 
 const FACILITY_TYPES = [
@@ -59,6 +71,9 @@ export default function FacilitiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [facilityToDelete, setFacilityToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [statusDialogFacility, setStatusDialogFacility] = useState<{ id: string; name: string; status: string } | null>(null);
 
   const canRead = hasPermission(PERMISSIONS.FACILITIES_READ);
   const canCreate = hasPermission(PERMISSIONS.FACILITIES_CREATE);
@@ -84,14 +99,25 @@ export default function FacilitiesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load depends on filters
   }, [canRead, searchTerm, statusFilter, typeFilter]);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this facility?')) return;
+  const openDeleteDialog = (facility: Facility) => {
+    setFacilityToDelete({ id: facility.id, name: facility.name });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!facilityToDelete) return;
     try {
-      await facilitiesApi.delete(id);
+      await facilitiesApi.delete(facilityToDelete.id);
+      setDeleteDialogOpen(false);
+      setFacilityToDelete(null);
       load();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      if (msg.toLowerCase().includes('not found')) load();
+      if (msg.toLowerCase().includes('not found')) {
+        setDeleteDialogOpen(false);
+        setFacilityToDelete(null);
+        load();
+      }
     }
   };
 
@@ -260,20 +286,30 @@ export default function FacilitiesPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           {canUpdate && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/facilities/${f.id}/edit`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setStatusDialogFacility({ id: f.id, name: f.name, status: f.status })}
+                                title="Update status"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/facilities/${f.id}/edit`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           {canDelete && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-red-600"
-                              onClick={() => handleDelete(f.id)}
+                              onClick={() => openDeleteDialog(f)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -291,6 +327,37 @@ export default function FacilitiesPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete facility</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{facilityToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {statusDialogFacility && (
+        <FacilityStatusUpdateDialog
+          open={!!statusDialogFacility}
+          onOpenChange={(open) => !open && setStatusDialogFacility(null)}
+          facilityId={statusDialogFacility.id}
+          facilityName={statusDialogFacility.name}
+          currentStatus={statusDialogFacility.status}
+          onSuccess={load}
+        />
+      )}
     </div>
   );
 }
