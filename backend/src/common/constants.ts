@@ -11,7 +11,21 @@ export const ENTITY_STATUS = {
   TERMINATED: 'TERMINATED',
 } as const;
 
-export const FACILITY_TYPES = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY'] as const;
+export const FACILITY_TYPES = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY', 'LAB'] as const;
+
+export const OWNERSHIP_TYPES = ['PUBLIC', 'PRIVATE', 'NGO', 'CHARITY'] as const;
+
+/** Facility status for registration workflow */
+export const FACILITY_STATUS_OPTIONS = [
+  'PENDING',
+  'APPROVED',
+  'ACTIVE',
+  'SUSPENDED',
+  'DRAFT',
+  'SUBMITTED',
+  'INACTIVE',
+  'TERMINATED',
+] as const;
 
 export const ROLES = {
   ADMIN: 'Admin',

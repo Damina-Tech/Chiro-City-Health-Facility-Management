@@ -151,11 +151,11 @@ export class StaffService {
     const staff = await this.prisma.staff.findUnique({ where: { id } });
     if (!staff) throw new NotFoundException('Staff not found');
     await this.prisma.staff.delete({ where: { id } });
+    // Do not set staffId: the staff record no longer exists; entityId identifies what was deleted
     await this.audit.log({
       action: 'DELETE',
       entity: 'Staff',
       entityId: id,
-      staffId: id,
       userId,
       payload: { name: staff.name },
     });

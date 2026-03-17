@@ -44,22 +44,47 @@ model User {
 }
 
 // ============ Facilities ============
-// Status: DRAFT | SUBMITTED | APPROVED | ACTIVE | INACTIVE | SUSPENDED | TERMINATED
+// Status: PENDING | APPROVED | ACTIVE | SUSPENDED (and legacy DRAFT | SUBMITTED | etc.)
 model Facility {
-  id              String   @id @default(uuid())
-  name            String
-  type            String   // HOSPITAL | CLINIC | HEALTH_CENTER | PHARMACY
-  registrationNo  String?
-  licenseNo       String?
-  licenseExpiry   DateTime?
-  address         String?
-  phone           String?
-  email           String?
-  status          String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, ACTIVE, INACTIVE, SUSPENDED, TERMINATED
-  services        String?  // JSON array of service names
-  legalInfo       String?  // JSON for legal details
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  name                  String
+  type                  String   // HOSPITAL | CLINIC | HEALTH_CENTER | PHARMACY | LAB
+  ownershipType         String?  // PUBLIC | PRIVATE | NGO | CHARITY
+  registrationNo        String?
+  tin                   String?  // Tax Identification Number
+  description           String?
+  // Location
+  region                String?
+  city                  String?
+  woreda                String?
+  kebele                String?
+  streetAddress         String?
+  gpsLat                Float?
+  gpsLng                Float?
+  // Contact
+  phone                 String?
+  altPhone              String?
+  email                 String?
+  website               String?
+  // Legal & compliance
+  licenseNo             String?  // Health Operation License Number
+  licenseIssueDate      DateTime?
+  licenseExpiry         DateTime?
+  regulatoryAuthority   String?
+  accreditationLevel    String?
+  // Operational
+  operatingHours        String?  // e.g. "08:00-18:00" or JSON
+  status                String   @default("DRAFT") // PENDING | APPROVED | ACTIVE | SUSPENDED | DRAFT | SUBMITTED | INACTIVE | TERMINATED
+  approvalStatus        String?  // optional separate approval tracking
+  // Legacy / extras
+  address               String?  // kept for backward compatibility
+  services              String?  // JSON array of service names
+  legalInfo             String?  // JSON for legal details
+  // Facility-type-specific (Hospital, Clinic, Health Center, Pharmacy) stored as JSON
+  specificFields        String?  // JSON: HospitalSpecific | ClinicSpecific | HealthCenterSpecific | PharmacySpecific
+  createdBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   staff           StaffAssignment[]
   staffMembers    Staff[]           // Staff with facilityId = this facility

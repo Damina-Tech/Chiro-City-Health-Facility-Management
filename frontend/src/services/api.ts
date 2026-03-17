@@ -59,20 +59,79 @@ export const dashboardApi = {
     ),
 };
 
-// Facilities
+// Facilities - Common + type-specific registration
+export interface FacilitySpecificFields {
+  hospital?: HospitalSpecific;
+  clinic?: ClinicSpecific;
+  healthCenter?: HealthCenterSpecific;
+  pharmacy?: PharmacySpecific;
+}
+
+export interface HospitalSpecific {
+  numberOfBeds?: number;
+  icuAvailability?: boolean;
+  emergencyService?: boolean;
+  numberOfDepartments?: number;
+  ambulanceService?: boolean;
+  surgeryService?: boolean;
+  laboratoryAvailable?: boolean;
+  bloodBankAvailable?: boolean;
+}
+
+export interface ClinicSpecific {
+  clinicCategory?: string;
+  specialization?: string;
+  consultationRoomsCount?: number;
+  laboratoryAvailable?: boolean;
+}
+
+export interface HealthCenterSpecific {
+  catchmentPopulation?: number;
+  maternalCareAvailable?: boolean;
+  vaccinationService?: boolean;
+  communityHealthProgram?: boolean;
+}
+
+export interface PharmacySpecific {
+  pharmacyType?: string;
+  drugStorageFacility?: boolean;
+  coldStorageAvailable?: boolean;
+  controlledDrugAuthorizationNumber?: string;
+  pharmacistInChargeId?: string;
+}
+
 export interface Facility {
   id: string;
   name: string;
   type: string;
+  ownershipType: string | null;
   registrationNo: string | null;
-  licenseNo: string | null;
-  licenseExpiry: string | null;
-  address: string | null;
+  tin: string | null;
+  description: string | null;
+  region: string | null;
+  city: string | null;
+  woreda: string | null;
+  kebele: string | null;
+  streetAddress: string | null;
+  gpsLat: number | null;
+  gpsLng: number | null;
   phone: string | null;
+  altPhone: string | null;
   email: string | null;
+  website: string | null;
+  licenseNo: string | null;
+  licenseIssueDate: string | null;
+  licenseExpiry: string | null;
+  regulatoryAuthority: string | null;
+  accreditationLevel: string | null;
+  operatingHours: string | null;
   status: string;
+  approvalStatus: string | null;
+  address: string | null;
   services: string | null;
   legalInfo: string | null;
+  specificFields: string | null;
+  createdBy: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: { documents: number };
@@ -104,7 +163,14 @@ export const facilitiesApi = {
   },
   get: (id: string) =>
     fetch(`${API_BASE}/facilities/${id}`, { headers: headers() }).then((res) =>
-      handleResponse<Facility & { staffList: Staff[]; services: string[]; legalInfo: Record<string, unknown> | null }>(res),
+      handleResponse<
+        Facility & {
+          staffList: Staff[];
+          services: string[];
+          legalInfo: Record<string, unknown> | null;
+          specificFields: FacilitySpecificFields | null;
+        }
+      >(res),
     ),
   getStaff: (id: string) =>
     fetch(`${API_BASE}/facilities/${id}/staff`, { headers: headers() }).then((res) =>
@@ -132,15 +198,34 @@ export const facilitiesApi = {
 export interface CreateFacilityDto {
   name: string;
   type: string;
+  ownershipType?: string;
   registrationNo?: string;
-  licenseNo?: string;
-  licenseExpiry?: string;
-  address?: string;
+  tin?: string;
+  description?: string;
+  region?: string;
+  city?: string;
+  woreda?: string;
+  kebele?: string;
+  streetAddress?: string;
+  gpsLat?: number;
+  gpsLng?: number;
   phone?: string;
+  altPhone?: string;
   email?: string;
+  website?: string;
+  licenseNo?: string;
+  licenseIssueDate?: string;
+  licenseExpiry?: string;
+  regulatoryAuthority?: string;
+  accreditationLevel?: string;
+  operatingHours?: string;
   status?: string;
+  approvalStatus?: string;
+  address?: string;
   services?: string[];
   legalInfo?: Record<string, unknown>;
+  specificFields?: FacilitySpecificFields;
+  createdBy?: string;
 }
 
 export type UpdateFacilityDto = Partial<CreateFacilityDto>;

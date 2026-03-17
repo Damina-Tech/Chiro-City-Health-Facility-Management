@@ -9,6 +9,7 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import FacilitiesPage from "./pages/FacilitiesPage";
 import FacilityProfilePage from "./pages/FacilityProfilePage";
+import FacilityRegistrationPage from "./pages/FacilityRegistrationPage";
 import StaffPage from "./pages/StaffPage";
 import StaffProfilePage from "./pages/StaffProfilePage";
 import EmployeesPage from "./pages/EmployeesPage";
@@ -134,6 +135,14 @@ function AppRoutes() {
         <Route
           path="facilities"
           element={<FacilitiesPage />}
+        />
+        <Route
+          path="facilities/register"
+          element={<FacilityRegistrationPage />}
+        />
+        <Route
+          path="facilities/:id/edit"
+          element={<FacilityRegistrationPage />}
         />
         <Route
           path="facilities/:id"
