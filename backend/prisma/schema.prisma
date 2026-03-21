@@ -110,24 +110,34 @@ model FacilityDocument {
 }
 
 // ============ Staff ============
-// Status: DRAFT | SUBMITTED | APPROVED | ACTIVE | INACTIVE | SUSPENDED | TERMINATED
+// Status: DRAFT | ACTIVE | SUSPENDED | TERMINATED | etc.
 model Staff {
   id            String   @id @default(uuid())
-  employeeId    String   @unique
-  name          String
+  employeeId    String   @unique // Staff ID
+  name          String   // Full display name (derived from first + last when registering)
+  firstName     String?
+  lastName      String?
+  gender        String?  // MALE | FEMALE | OTHER
+  dateOfBirth   DateTime?
+  nationalId    String?
   email         String
   phone         String?
+  address       String?
   department    String?
-  designation   String
+  designation   String   // Job title / role label
+  staffRole     String?  // DOCTOR | NURSE | PHARMACIST | LAB_TECH | ADMIN
+  employmentType String? // PERMANENT | CONTRACT | TEMPORARY
   facilityId    String?
   facility      Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   departmentName String?
   licenseNo     String?
+  licenseIssueDate DateTime?
   licenseExpiry DateTime?
   status        String   @default("DRAFT")
   joiningDate   DateTime?
-  address       String?
   emergencyContact String?
+  specificFields String? // JSON: doctor | nurse | pharmacist | labTechnician | administrative
+  createdBy     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -13,7 +13,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { PERMISSIONS } from '@/constants/permissions';
-import { staffApi, documentsApi, type Staff, type StaffDocument } from '@/services/api';
+import { staffApi, documentsApi, type Staff, type StaffDocument, type StaffSpecificFields } from '@/services/api';
 import {
   ArrowLeft,
   MapPin,
@@ -30,7 +30,7 @@ export default function StaffProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  const [staff, setStaff] = useState<Staff | null>(null);
+  const [staff, setStaff] = useState<(Staff & { specificFields?: StaffSpecificFields | null }) | null>(null);
   const [documents, setDocuments] = useState<StaffDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -40,6 +40,7 @@ export default function StaffProfilePage() {
   const [uploading, setUploading] = useState(false);
 
   const canReadStaff = hasPermission(PERMISSIONS.STAFF_READ);
+  const canUpdateStaff = hasPermission(PERMISSIONS.STAFF_UPDATE);
   const canUpload = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_UPLOAD);
   const canListDocs = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_READ);
 
@@ -70,7 +71,9 @@ export default function StaffProfilePage() {
       setUploadFile(null);
       setUploadName('');
       setUploadType('other');
-    } catch {}
+    } catch {
+      // ignore
+    }
     setUploading(false);
   };
 
@@ -106,15 +109,16 @@ export default function StaffProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => navigate('/staff')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold text-gray-900">{staff.name}</h1>
-          <p className="text-gray-600 flex items-center gap-2 mt-1">
+          <p className="text-gray-600 flex flex-wrap items-center gap-2 mt-1">
             <Badge className={getStatusColor(staff.status)}>{staff.status}</Badge>
             <Badge variant="outline">{staff.employeeId}</Badge>
+            {staff.staffRole && <Badge variant="outline">{staff.staffRole}</Badge>}
             {staff.facility && (
               <Badge variant="secondary" className="cursor-pointer" onClick={() => navigate(`/facilities/${staff.facility!.id}`)}>
                 {staff.facility.name}
@@ -122,6 +126,11 @@ export default function StaffProfilePage() {
             )}
           </p>
         </div>
+        {canUpdateStaff && (
+          <Button variant="outline" onClick={() => navigate(`/staff/${staff.id}/edit`)}>
+            Edit registration
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -134,8 +143,23 @@ export default function StaffProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {(staff.firstName || staff.lastName) && (
+                <p><span className="font-medium text-gray-600">Legal name:</span>{' '}
+                  {[staff.firstName, staff.lastName].filter(Boolean).join(' ') || staff.name}
+                </p>
+              )}
+              {staff.gender && <p><span className="font-medium text-gray-600">Gender:</span> {staff.gender}</p>}
+              {staff.dateOfBirth && (
+                <p><span className="font-medium text-gray-600">Date of birth:</span>{' '}
+                  {new Date(staff.dateOfBirth).toLocaleDateString()}
+                </p>
+              )}
+              {staff.nationalId && <p><span className="font-medium text-gray-600">National ID:</span> {staff.nationalId}</p>}
               <p><span className="font-medium text-gray-600">Designation:</span> {staff.designation}</p>
               <p><span className="font-medium text-gray-600">Department:</span> {staff.departmentName || staff.department || '—'}</p>
+              {staff.employmentType && (
+                <p><span className="font-medium text-gray-600">Employment type:</span> {staff.employmentType}</p>
+              )}
               {staff.joiningDate && (
                 <p className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-500" />
@@ -144,6 +168,11 @@ export default function StaffProfilePage() {
               )}
               {staff.licenseNo && (
                 <p><span className="font-medium text-gray-600">License:</span> {staff.licenseNo}</p>
+              )}
+              {staff.licenseIssueDate && (
+                <p><span className="font-medium text-gray-600">License issued:</span>{' '}
+                  {new Date(staff.licenseIssueDate).toLocaleDateString()}
+                </p>
               )}
               {staff.licenseExpiry && (
                 <p><span className="font-medium text-gray-600">License expiry:</span>{' '}
@@ -170,6 +199,14 @@ export default function StaffProfilePage() {
                 <p className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-gray-500" /> {staff.facility.name}
                 </p>
+              )}
+              {staff.specificFields && (
+                <div className="pt-2 border-t">
+                  <p className="font-medium text-gray-600 mb-2">Role-specific</p>
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto whitespace-pre-wrap">
+                    {JSON.stringify(staff.specificFields, null, 2)}
+                  </pre>
+                </div>
               )}
             </CardContent>
           </Card>

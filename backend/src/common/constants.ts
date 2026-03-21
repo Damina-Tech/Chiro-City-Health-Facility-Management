@@ -32,6 +32,19 @@ export const ROLES = {
   OFFICER: 'Officer',
 } as const;
 
+/** Staff primary role — drives role-specific registration fields */
+export const STAFF_ROLES = [
+  'DOCTOR',
+  'NURSE',
+  'PHARMACIST',
+  'LAB_TECH',
+  'ADMIN',
+] as const;
+
+export const EMPLOYMENT_TYPES = ['PERMANENT', 'CONTRACT', 'TEMPORARY'] as const;
+
+export const GENDERS = ['MALE', 'FEMALE', 'OTHER'] as const;
+
 /**
  * RBAC: Permission names used for guards and seed.
  * Use RequirePermissions('permission.name') on routes; user must have exact or wildcard (e.g. facilities.*).

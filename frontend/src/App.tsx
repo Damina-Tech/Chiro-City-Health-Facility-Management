@@ -12,6 +12,7 @@ import FacilityProfilePage from "./pages/FacilityProfilePage";
 import FacilityRegistrationPage from "./pages/FacilityRegistrationPage";
 import StaffPage from "./pages/StaffPage";
 import StaffProfilePage from "./pages/StaffProfilePage";
+import StaffRegistrationPage from "./pages/StaffRegistrationPage";
 import EmployeesPage from "./pages/EmployeesPage";
 import AttendancePage from "./pages/AttendancePage";
 import LeaveManagement from "./pages/LeaveManagement";
@@ -151,6 +152,14 @@ function AppRoutes() {
         <Route
           path="staff"
           element={<StaffPage />}
+        />
+        <Route
+          path="staff/register"
+          element={<StaffRegistrationPage />}
+        />
+        <Route
+          path="staff/:id/edit"
+          element={<StaffRegistrationPage />}
         />
         <Route
           path="staff/:id"

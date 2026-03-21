@@ -13,24 +13,47 @@ export class StaffService {
     private notifications: NotificationsService,
   ) {}
 
+  private serializeSpecificFields(fields: CreateStaffDto['specificFields']): string | null {
+    if (!fields || !Object.keys(fields).length) return null;
+    return JSON.stringify(fields);
+  }
+
+  private mapCreateData(dto: CreateStaffDto, userId?: string) {
+    const name =
+      dto.name?.trim() ||
+      `${dto.firstName} ${dto.lastName}`.trim() ||
+      dto.employeeId;
+    return {
+      employeeId: dto.employeeId,
+      name,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      gender: dto.gender ?? undefined,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+      nationalId: dto.nationalId ?? undefined,
+      email: dto.email,
+      phone: dto.phone ?? undefined,
+      address: dto.address ?? undefined,
+      department: dto.department ?? undefined,
+      designation: dto.designation,
+      staffRole: dto.staffRole ?? undefined,
+      employmentType: dto.employmentType ?? undefined,
+      facilityId: dto.facilityId ?? undefined,
+      departmentName: dto.departmentName ?? undefined,
+      licenseNo: dto.licenseNo ?? undefined,
+      licenseIssueDate: dto.licenseIssueDate ? new Date(dto.licenseIssueDate) : undefined,
+      licenseExpiry: dto.licenseExpiry ? new Date(dto.licenseExpiry) : undefined,
+      status: dto.status || 'DRAFT',
+      joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : undefined,
+      emergencyContact: dto.emergencyContact ?? undefined,
+      specificFields: this.serializeSpecificFields(dto.specificFields),
+      createdBy: dto.createdBy ?? userId ?? undefined,
+    };
+  }
+
   async create(dto: CreateStaffDto, userId?: string) {
     const staff = await this.prisma.staff.create({
-      data: {
-        employeeId: dto.employeeId,
-        name: dto.name,
-        email: dto.email,
-        phone: dto.phone,
-        department: dto.department,
-        designation: dto.designation,
-        facilityId: dto.facilityId,
-        departmentName: dto.departmentName,
-        licenseNo: dto.licenseNo,
-        licenseExpiry: dto.licenseExpiry ? new Date(dto.licenseExpiry) : null,
-        status: dto.status || 'DRAFT',
-        joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : null,
-        address: dto.address,
-        emergencyContact: dto.emergencyContact,
-      },
+      data: this.mapCreateData(dto, userId),
     });
     await this.audit.log({
       action: 'CREATE',
@@ -59,8 +82,11 @@ export class StaffService {
     if (params?.search) {
       where.OR = [
         { name: { contains: params.search, mode: 'insensitive' } },
+        { firstName: { contains: params.search, mode: 'insensitive' } },
+        { lastName: { contains: params.search, mode: 'insensitive' } },
         { email: { contains: params.search, mode: 'insensitive' } },
         { employeeId: { contains: params.search, mode: 'insensitive' } },
+        { nationalId: { contains: params.search, mode: 'insensitive' } },
       ];
     }
     if (params?.status) where.status = params.status;
@@ -86,35 +112,52 @@ export class StaffService {
       },
     });
     if (!staff) throw new NotFoundException('Staff not found');
-    return staff;
+    return {
+      ...staff,
+      specificFields: staff.specificFields ? JSON.parse(staff.specificFields) : null,
+    };
   }
 
   async update(id: string, dto: UpdateStaffDto, userId?: string) {
     const existing = await this.prisma.staff.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Staff not found');
 
+    const data: any = {};
+    if (dto.employeeId !== undefined) data.employeeId = dto.employeeId;
+    if (dto.firstName !== undefined) data.firstName = dto.firstName;
+    if (dto.lastName !== undefined) data.lastName = dto.lastName;
+    if (dto.firstName !== undefined || dto.lastName !== undefined || dto.name !== undefined) {
+      const fn = dto.firstName !== undefined ? dto.firstName : existing.firstName;
+      const ln = dto.lastName !== undefined ? dto.lastName : existing.lastName;
+      const combined = [fn, ln].filter(Boolean).join(' ').trim();
+      if (combined) data.name = combined;
+      else if (dto.name !== undefined) data.name = dto.name;
+    } else if (dto.name !== undefined) {
+      data.name = dto.name;
+    }
+    if (dto.gender !== undefined) data.gender = dto.gender;
+    if (dto.dateOfBirth !== undefined) data.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : null;
+    if (dto.nationalId !== undefined) data.nationalId = dto.nationalId;
+    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.address !== undefined) data.address = dto.address;
+    if (dto.department !== undefined) data.department = dto.department;
+    if (dto.designation !== undefined) data.designation = dto.designation;
+    if (dto.staffRole !== undefined) data.staffRole = dto.staffRole;
+    if (dto.employmentType !== undefined) data.employmentType = dto.employmentType;
+    if (dto.facilityId !== undefined) data.facilityId = dto.facilityId;
+    if (dto.departmentName !== undefined) data.departmentName = dto.departmentName;
+    if (dto.licenseNo !== undefined) data.licenseNo = dto.licenseNo;
+    if (dto.licenseIssueDate !== undefined) data.licenseIssueDate = dto.licenseIssueDate ? new Date(dto.licenseIssueDate) : null;
+    if (dto.licenseExpiry !== undefined) data.licenseExpiry = dto.licenseExpiry ? new Date(dto.licenseExpiry) : null;
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.joiningDate !== undefined) data.joiningDate = dto.joiningDate ? new Date(dto.joiningDate) : null;
+    if (dto.emergencyContact !== undefined) data.emergencyContact = dto.emergencyContact;
+    if (dto.specificFields !== undefined) data.specificFields = this.serializeSpecificFields(dto.specificFields);
+
     const staff = await this.prisma.staff.update({
       where: { id },
-      data: {
-        ...(dto.employeeId && { employeeId: dto.employeeId }),
-        ...(dto.name && { name: dto.name }),
-        ...(dto.email && { email: dto.email }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
-        ...(dto.department !== undefined && { department: dto.department }),
-        ...(dto.designation && { designation: dto.designation }),
-        ...(dto.facilityId !== undefined && { facilityId: dto.facilityId }),
-        ...(dto.departmentName !== undefined && { departmentName: dto.departmentName }),
-        ...(dto.licenseNo !== undefined && { licenseNo: dto.licenseNo }),
-        ...(dto.licenseExpiry !== undefined && {
-          licenseExpiry: dto.licenseExpiry ? new Date(dto.licenseExpiry) : null,
-        }),
-        ...(dto.status && { status: dto.status }),
-        ...(dto.joiningDate !== undefined && {
-          joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : null,
-        }),
-        ...(dto.address !== undefined && { address: dto.address }),
-        ...(dto.emergencyContact !== undefined && { emergencyContact: dto.emergencyContact }),
-      },
+      data,
     });
 
     if (dto.facilityId && dto.facilityId !== existing.facilityId) {
@@ -151,7 +194,6 @@ export class StaffService {
     const staff = await this.prisma.staff.findUnique({ where: { id } });
     if (!staff) throw new NotFoundException('Staff not found');
     await this.prisma.staff.delete({ where: { id } });
-    // Do not set staffId: the staff record no longer exists; entityId identifies what was deleted
     await this.audit.log({
       action: 'DELETE',
       entity: 'Staff',
@@ -162,7 +204,6 @@ export class StaffService {
     return { deleted: true };
   }
 
-  /** Staff with license expiring within days */
   async findLicenseExpiringWithin(days: number) {
     const from = new Date();
     const to = new Date();

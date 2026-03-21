@@ -230,24 +230,42 @@ export interface CreateFacilityDto {
 
 export type UpdateFacilityDto = Partial<CreateFacilityDto>;
 
-// Staff
+// Staff — common + role-specific (specificFields JSON)
+export interface StaffSpecificFields {
+  doctor?: Record<string, unknown>;
+  nurse?: Record<string, unknown>;
+  pharmacist?: Record<string, unknown>;
+  labTechnician?: Record<string, unknown>;
+  administrative?: Record<string, unknown>;
+}
+
 export interface Staff {
   id: string;
   employeeId: string;
   name: string;
+  firstName: string | null;
+  lastName: string | null;
+  gender: string | null;
+  dateOfBirth: string | null;
+  nationalId: string | null;
   email: string;
   phone: string | null;
+  address: string | null;
   department: string | null;
   designation: string;
+  staffRole: string | null;
+  employmentType: string | null;
   facilityId: string | null;
   facility?: { id: string; name: string; type: string };
   departmentName: string | null;
   licenseNo: string | null;
+  licenseIssueDate: string | null;
   licenseExpiry: string | null;
   status: string;
   joiningDate: string | null;
-  address: string | null;
   emergencyContact: string | null;
+  specificFields: string | null;
+  createdBy: string | null;
   createdAt: string;
   updatedAt: string;
   documents?: StaffDocument[];
@@ -266,19 +284,29 @@ export interface StaffDocument {
 
 export interface CreateStaffDto {
   employeeId: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  gender?: string;
+  dateOfBirth?: string;
+  nationalId?: string;
   email: string;
   phone?: string;
+  address?: string;
   department?: string;
   designation: string;
+  staffRole?: string;
+  employmentType?: string;
   facilityId?: string;
   departmentName?: string;
   licenseNo?: string;
+  licenseIssueDate?: string;
   licenseExpiry?: string;
   status?: string;
   joiningDate?: string;
-  address?: string;
   emergencyContact?: string;
+  specificFields?: StaffSpecificFields;
+  createdBy?: string;
+  name?: string;
 }
 
 export type UpdateStaffDto = Partial<CreateStaffDto>;
@@ -296,7 +324,7 @@ export const staffApi = {
   },
   get: (id: string) =>
     fetch(`${API_BASE}/staff/${id}`, { headers: headers() }).then((res) =>
-      handleResponse<Staff>(res),
+      handleResponse<Staff & { specificFields: StaffSpecificFields | null }>(res),
     ),
   licenseExpiring: (days?: number) =>
     fetch(`${API_BASE}/staff/license-expiring${days != null ? `?days=${days}` : ''}`, {

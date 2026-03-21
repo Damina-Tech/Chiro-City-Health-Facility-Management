@@ -15,22 +15,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { PERMISSIONS } from '@/constants/permissions';
-import { staffApi, facilitiesApi, type Staff, type CreateStaffDto } from '@/services/api';
+import { staffApi, facilitiesApi, type Staff } from '@/services/api';
 import {
   Users,
   Search,
@@ -40,7 +32,6 @@ import {
   Eye,
   Mail,
   Phone,
-  Building2,
 } from 'lucide-react';
 
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'TERMINATED'];
@@ -54,22 +45,11 @@ export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [facilityFilter, setFacilityFilter] = useState('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<CreateStaffDto>({
-    employeeId: '',
-    name: '',
-    email: '',
-    designation: '',
-    status: 'DRAFT',
-  });
-  const [submitError, setSubmitError] = useState('');
 
   const canRead = hasPermission(PERMISSIONS.STAFF_READ);
   const canCreate = hasPermission(PERMISSIONS.STAFF_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.STAFF_UPDATE);
   const canDelete = hasPermission(PERMISSIONS.STAFF_DELETE);
-  const canEdit = canCreate || canUpdate;
 
   const loadStaff = () => {
     if (!canRead) return;
@@ -87,93 +67,21 @@ export default function StaffPage() {
 
   useEffect(() => {
     loadStaff();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRead, searchTerm, statusFilter, facilityFilter]);
 
   useEffect(() => {
     facilitiesApi.list().then((list) => setFacilities(list.map((f) => ({ id: f.id, name: f.name }))));
   }, []);
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm({
-      employeeId: '',
-      name: '',
-      email: '',
-      phone: '',
-      department: '',
-      designation: '',
-      facilityId: undefined,
-      departmentName: '',
-      licenseNo: '',
-      status: 'DRAFT',
-      joiningDate: '',
-      address: '',
-      emergencyContact: '',
-    });
-    setSubmitError('');
-    setDialogOpen(true);
-  };
-
-  const openEdit = (s: Staff) => {
-    setEditingId(s.id);
-    setForm({
-      employeeId: s.employeeId,
-      name: s.name,
-      email: s.email,
-      phone: s.phone ?? '',
-      department: s.department ?? '',
-      designation: s.designation,
-      facilityId: s.facilityId ?? undefined,
-      departmentName: s.departmentName ?? '',
-      licenseNo: s.licenseNo ?? '',
-      licenseExpiry: s.licenseExpiry ? s.licenseExpiry.slice(0, 10) : undefined,
-      status: s.status,
-      joiningDate: s.joiningDate ? s.joiningDate.slice(0, 10) : undefined,
-      address: s.address ?? '',
-      emergencyContact: s.emergencyContact ?? '',
-    });
-    setSubmitError('');
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError('');
-    const payload: CreateStaffDto = {
-      employeeId: form.employeeId,
-      name: form.name,
-      email: form.email,
-      designation: form.designation,
-      status: form.status || 'DRAFT',
-    };
-    if (form.phone) payload.phone = form.phone;
-    if (form.department) payload.department = form.department;
-    if (form.facilityId) payload.facilityId = form.facilityId;
-    if (form.departmentName) payload.departmentName = form.departmentName;
-    if (form.licenseNo) payload.licenseNo = form.licenseNo;
-    if (form.licenseExpiry) payload.licenseExpiry = form.licenseExpiry;
-    if (form.joiningDate) payload.joiningDate = form.joiningDate;
-    if (form.address) payload.address = form.address;
-    if (form.emergencyContact) payload.emergencyContact = form.emergencyContact;
-    try {
-      if (editingId) {
-        await staffApi.update(editingId, payload);
-      } else {
-        await staffApi.create(payload);
-      }
-      setDialogOpen(false);
-      loadStaff();
-    } catch (err: any) {
-      setSubmitError(err?.message || 'Failed to save');
-    }
-  };
-
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this staff record?')) return;
     try {
       await staffApi.delete(id);
       loadStaff();
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -208,12 +116,12 @@ export default function StaffPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Staff</h1>
-          <p className="text-gray-600 mt-1">Manage health facility staff</p>
+          <p className="text-gray-600 mt-1">Register and manage health facility staff</p>
         </div>
         {canCreate && (
-          <Button onClick={openCreate}>
+          <Button onClick={() => navigate('/staff/register')}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Staff
+            Register staff
           </Button>
         )}
       </div>
@@ -254,7 +162,7 @@ export default function StaffPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name, email, employee ID..."
+                placeholder="Search by name, email, staff ID, national ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -313,6 +221,9 @@ export default function StaffPage() {
                             <p className="font-medium">{s.name}</p>
                             <p className="text-sm text-gray-500">{s.designation}</p>
                             <p className="text-xs text-gray-400">{s.employeeId}</p>
+                            {s.staffRole && (
+                              <Badge variant="outline" className="text-[10px] mt-1">{s.staffRole}</Badge>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -349,7 +260,11 @@ export default function StaffPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           {canUpdate && (
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/staff/${s.id}/edit`)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           )}
@@ -376,134 +291,6 @@ export default function StaffPage() {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Staff' : 'Add Staff'}</DialogTitle>
-            <DialogDescription>Enter staff details</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Employee ID *</Label>
-                <Input
-                  value={form.employeeId}
-                  onChange={(e) => setForm((p) => ({ ...p, employeeId: e.target.value }))}
-                  required
-                  placeholder="e.g. EMP-001"
-                />
-              </div>
-              <div>
-                <Label>Designation *</Label>
-                <Input
-                  value={form.designation}
-                  onChange={(e) => setForm((p) => ({ ...p, designation: e.target.value }))}
-                  required
-                  placeholder="e.g. Nurse"
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Full Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <Label>Email *</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <Label>Phone</Label>
-              <Input
-                value={form.phone ?? ''}
-                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Facility</Label>
-              <Select
-                value={form.facilityId ?? 'none'}
-                onValueChange={(v) => setForm((p) => ({ ...p, facilityId: v === 'none' ? undefined : v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select facility" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— None —</SelectItem>
-                  {facilities.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Department</Label>
-              <Input
-                value={form.department ?? ''}
-                onChange={(e) => setForm((p) => ({ ...p, department: e.target.value, departmentName: e.target.value }))}
-                placeholder="Within facility"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>License No</Label>
-                <Input
-                  value={form.licenseNo ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, licenseNo: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>License Expiry</Label>
-                <Input
-                  type="date"
-                  value={form.licenseExpiry ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, licenseExpiry: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Joining Date</Label>
-              <Input
-                type="date"
-                value={form.joiningDate ?? ''}
-                onChange={(e) => setForm((p) => ({ ...p, joiningDate: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select
-                value={form.status ?? 'DRAFT'}
-                onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">{editingId ? 'Update' : 'Create'}</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
