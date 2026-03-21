@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,9 +18,16 @@ import { PERMISSIONS } from '@/constants/permissions';
 import {
   staffApi,
   facilitiesApi,
+  documentsApi,
   type CreateStaffDto,
   type StaffSpecificFields,
+  type StaffDocument,
 } from '@/services/api';
+import {
+  RegistrationLegalDocumentsSection,
+  uploadPendingStaffDocuments,
+  type PendingLegalDocument,
+} from '@/components/registration/RegistrationLegalDocumentsSection';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react';
 
@@ -102,6 +109,8 @@ export default function StaffRegistrationPage() {
   const isEdit = Boolean(id);
   const canCreate = hasPermission(PERMISSIONS.STAFF_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.STAFF_UPDATE);
+  const canDocRead = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_READ);
+  const canDocUpload = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_UPLOAD);
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>(emptyForm());
@@ -109,6 +118,23 @@ export default function StaffRegistrationPage() {
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStaff, setLoadingStaff] = useState(isEdit);
+  const [pendingLegalDocs, setPendingLegalDocs] = useState<PendingLegalDocument[]>([]);
+  const [serverLegalDocs, setServerLegalDocs] = useState<StaffDocument[]>([]);
+
+  const loadStaffDocuments = useCallback(() => {
+    if (!id || !canDocRead) {
+      setServerLegalDocs([]);
+      return;
+    }
+    documentsApi.staff
+      .list(id)
+      .then(setServerLegalDocs)
+      .catch(() => setServerLegalDocs([]));
+  }, [id, canDocRead]);
+
+  useEffect(() => {
+    loadStaffDocuments();
+  }, [loadStaffDocuments]);
 
   const totalSteps = STEPS.length;
   const progress = (step / totalSteps) * 100;
@@ -174,18 +200,55 @@ export default function StaffRegistrationPage() {
     try {
       if (isEdit && id) {
         await staffApi.update(id, payload);
+        const queued = pendingLegalDocs.length;
+        if (queued > 0 && canDocUpload) {
+          try {
+            await uploadPendingStaffDocuments(id, pendingLegalDocs);
+          } catch (docErr) {
+            setPendingLegalDocs([]);
+            toast({
+              title: 'Staff updated; document upload failed',
+              description: docErr instanceof Error ? docErr.message : 'Some files could not be uploaded.',
+              variant: 'destructive',
+            });
+            navigate(`/staff/${id}`);
+            return;
+          }
+        }
+        setPendingLegalDocs([]);
         toast({
           title: 'Staff updated',
-          description: 'Changes have been saved successfully.',
+          description:
+            queued > 0 && canDocUpload
+              ? `Changes saved and ${queued} legal document(s) uploaded.`
+              : 'Changes have been saved successfully.',
         });
         navigate(`/staff/${id}`);
       } else {
         const created = await staffApi.create(payload);
+        const queued = pendingLegalDocs.length;
+        if (queued > 0 && canDocUpload) {
+          try {
+            await uploadPendingStaffDocuments(created.id, pendingLegalDocs);
+          } catch (docErr) {
+            setPendingLegalDocs([]);
+            toast({
+              title: 'Staff created; document upload failed',
+              description: docErr instanceof Error ? docErr.message : 'Add documents from the staff profile.',
+              variant: 'destructive',
+            });
+            navigate(`/staff/${created.id}`);
+            return;
+          }
+        }
+        setPendingLegalDocs([]);
+        const baseDesc = isOfficer
+          ? 'Submitted as SUBMITTED — an admin will review and activate the record.'
+          : 'The staff record has been created.';
         toast({
           title: 'Staff registered',
-          description: isOfficer
-            ? 'Submitted as SUBMITTED — an admin will review and activate the record.'
-            : 'The staff record has been created.',
+          description:
+            queued > 0 && canDocUpload ? `${baseDesc} ${queued} legal document(s) uploaded.` : baseDesc,
         });
         navigate(`/staff/${created.id}`);
       }
@@ -377,6 +440,17 @@ export default function StaffRegistrationPage() {
                 <div><Label>License issue date</Label><Input type="date" value={form.licenseIssueDate ?? ''} onChange={(e) => setForm((p) => ({ ...p, licenseIssueDate: e.target.value }))} /></div>
                 <div><Label>License expiry date</Label><Input type="date" value={form.licenseExpiry ?? ''} onChange={(e) => setForm((p) => ({ ...p, licenseExpiry: e.target.value }))} /></div>
               </div>
+
+              <RegistrationLegalDocumentsSection
+                variant="staff"
+                entityId={isEdit ? id : undefined}
+                pending={pendingLegalDocs}
+                onPendingChange={setPendingLegalDocs}
+                serverDocuments={serverLegalDocs}
+                onRefreshServerDocuments={loadStaffDocuments}
+                canRead={canDocRead}
+                canUpload={canDocUpload}
+              />
             </>
           )}
 

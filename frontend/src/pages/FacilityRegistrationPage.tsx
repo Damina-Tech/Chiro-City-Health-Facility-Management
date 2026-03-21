@@ -17,10 +17,16 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PERMISSIONS } from '@/constants/permissions';
 import {
   facilitiesApi,
-  type Facility,
+  documentsApi,
   type CreateFacilityDto,
   type FacilitySpecificFields,
+  type FacilityDocument,
 } from '@/services/api';
+import {
+  RegistrationLegalDocumentsSection,
+  uploadPendingFacilityDocuments,
+  type PendingLegalDocument,
+} from '@/components/registration/RegistrationLegalDocumentsSection';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react';
 
@@ -129,12 +135,31 @@ export default function FacilityRegistrationPage() {
   const isEdit = Boolean(id);
   const canCreate = hasPermission(PERMISSIONS.FACILITIES_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.FACILITIES_UPDATE);
+  const canDocRead = hasPermission(PERMISSIONS.DOCUMENTS_FACILITY_READ);
+  const canDocUpload = hasPermission(PERMISSIONS.DOCUMENTS_FACILITY_UPLOAD);
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingFacility, setLoadingFacility] = useState(isEdit);
+  const [pendingLegalDocs, setPendingLegalDocs] = useState<PendingLegalDocument[]>([]);
+  const [serverLegalDocs, setServerLegalDocs] = useState<FacilityDocument[]>([]);
+
+  const loadFacilityDocuments = useCallback(() => {
+    if (!id || !canDocRead) {
+      setServerLegalDocs([]);
+      return;
+    }
+    documentsApi.facility
+      .list(id)
+      .then(setServerLegalDocs)
+      .catch(() => setServerLegalDocs([]));
+  }, [id, canDocRead]);
+
+  useEffect(() => {
+    loadFacilityDocuments();
+  }, [loadFacilityDocuments]);
 
   useEffect(() => {
     if (!isEdit || !id) return;
@@ -203,18 +228,55 @@ export default function FacilityRegistrationPage() {
     try {
       if (isEdit && id) {
         await facilitiesApi.update(id, payload);
+        const queued = pendingLegalDocs.length;
+        if (queued > 0 && canDocUpload) {
+          try {
+            await uploadPendingFacilityDocuments(id, pendingLegalDocs);
+          } catch (docErr) {
+            setPendingLegalDocs([]);
+            toast({
+              title: 'Facility updated; document upload failed',
+              description: docErr instanceof Error ? docErr.message : 'Some files could not be uploaded.',
+              variant: 'destructive',
+            });
+            navigate(`/facilities/${id}`);
+            return;
+          }
+        }
+        setPendingLegalDocs([]);
         toast({
           title: 'Facility updated',
-          description: 'Changes have been saved successfully.',
+          description:
+            queued > 0 && canDocUpload
+              ? `Changes saved and ${queued} legal document(s) uploaded.`
+              : 'Changes have been saved successfully.',
         });
         navigate(`/facilities/${id}`);
       } else {
         const created = await facilitiesApi.create(payload);
+        const queued = pendingLegalDocs.length;
+        if (queued > 0 && canDocUpload) {
+          try {
+            await uploadPendingFacilityDocuments(created.id, pendingLegalDocs);
+          } catch (docErr) {
+            setPendingLegalDocs([]);
+            toast({
+              title: 'Facility created; document upload failed',
+              description: docErr instanceof Error ? docErr.message : 'Add documents from the facility profile.',
+              variant: 'destructive',
+            });
+            navigate(`/facilities/${created.id}`);
+            return;
+          }
+        }
+        setPendingLegalDocs([]);
+        const baseDesc = isOfficer
+          ? 'Submitted as SUBMITTED — an admin will review and set the final status.'
+          : 'The facility has been created.';
         toast({
           title: 'Facility registered',
-          description: isOfficer
-            ? 'Submitted as SUBMITTED — an admin will review and set the final status.'
-            : 'The facility has been created.',
+          description:
+            queued > 0 && canDocUpload ? `${baseDesc} ${queued} legal document(s) uploaded.` : baseDesc,
         });
         navigate(`/facilities/${created.id}`);
       }
@@ -418,6 +480,17 @@ export default function FacilityRegistrationPage() {
                 <div><Label>Regulatory Authority</Label><Input value={form.regulatoryAuthority ?? ''} onChange={(e) => setForm((p) => ({ ...p, regulatoryAuthority: e.target.value }))} /></div>
                 <div><Label>Accreditation Level</Label><Input value={form.accreditationLevel ?? ''} onChange={(e) => setForm((p) => ({ ...p, accreditationLevel: e.target.value }))} placeholder="Optional" /></div>
               </div>
+
+              <RegistrationLegalDocumentsSection
+                variant="facility"
+                entityId={isEdit ? id : undefined}
+                pending={pendingLegalDocs}
+                onPendingChange={setPendingLegalDocs}
+                serverDocuments={serverLegalDocs}
+                onRefreshServerDocuments={loadFacilityDocuments}
+                canRead={canDocRead}
+                canUpload={canDocUpload}
+              />
             </>
           )}
 
