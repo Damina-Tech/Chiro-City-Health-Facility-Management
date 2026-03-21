@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +27,7 @@ import {
   uploadPendingFacilityDocuments,
   type PendingLegalDocument,
 } from '@/components/registration/RegistrationLegalDocumentsSection';
+import { FacilityRegistrationWizardPreview } from '@/components/registration/RegistrationWizardPreview';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react';
 
@@ -213,9 +214,20 @@ export default function FacilityRegistrationPage() {
   };
 
   const hasSpecificStep = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY'].includes(form.type);
-  const totalSteps = hasSpecificStep ? 6 : 5;
+  const totalSteps = (hasSpecificStep ? 6 : 5) + 1; // + review & submit
   const isLastStep = step === totalSteps;
   const progress = (step / totalSteps) * 100;
+
+  const wizardSteps = useMemo(() => {
+    const items = [...STEPS.slice(0, 5)];
+    if (hasSpecificStep) items.push(STEPS[5]);
+    items.push({ id: 99, title: 'Review & submit', short: 'Review' });
+    return items;
+  }, [hasSpecificStep]);
+
+  useEffect(() => {
+    if (step > totalSteps) setStep(totalSteps);
+  }, [totalSteps, step]);
 
   const handleSubmit = async () => {
     setSubmitError('');
@@ -347,21 +359,24 @@ export default function FacilityRegistrationPage() {
       {/* Stepper */}
       <div className="space-y-2">
         <div className="flex justify-between gap-1">
-          {STEPS.slice(0, totalSteps).map((s) => (
-            <div
-              key={s.id}
-              className={`flex-1 flex flex-col items-center gap-1 ${s.id === step ? 'text-blue-600' : s.id < step ? 'text-green-600' : 'text-gray-400'}`}
-            >
+          {wizardSteps.map((s, idx) => {
+            const n = idx + 1;
+            return (
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border-2 ${
-                  s.id < step ? 'bg-green-500 text-white border-green-500' : s.id === step ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
-                }`}
+                key={`${s.short}-${idx}`}
+                className={`flex-1 flex flex-col items-center gap-1 ${n === step ? 'text-blue-600' : n < step ? 'text-green-600' : 'text-gray-400'}`}
               >
-                {s.id < step ? <Check className="h-4 w-4" /> : s.id}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border-2 ${
+                    n < step ? 'bg-green-500 text-white border-green-500' : n === step ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+                  }`}
+                >
+                  {n < step ? <Check className="h-4 w-4" /> : n}
+                </div>
+                <span className="text-xs font-medium hidden sm:inline">{s.short}</span>
               </div>
-              <span className="text-xs font-medium hidden sm:inline">{s.short}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <Progress value={progress} className="h-2" />
       </div>
@@ -373,7 +388,7 @@ export default function FacilityRegistrationPage() {
       {/* Step content */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">{STEPS[step - 1].title}</CardTitle>
+          <CardTitle className="text-lg">{wizardSteps[step - 1]?.title ?? 'Review & submit'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 1 && (
@@ -581,8 +596,14 @@ export default function FacilityRegistrationPage() {
             </>
           )}
 
-          {step === 6 && !hasSpecificStep && (
-            <p className="text-gray-500">No additional fields for this facility type. Click Submit to save.</p>
+          {step === totalSteps && (
+            <FacilityRegistrationWizardPreview
+              form={form}
+              hasSpecificStep={hasSpecificStep}
+              pendingLegalDocs={pendingLegalDocs}
+              serverLegalDocs={serverLegalDocs}
+              isOfficer={isOfficer}
+            />
           )}
         </CardContent>
       </Card>
@@ -600,7 +621,7 @@ export default function FacilityRegistrationPage() {
           </Button>
         ) : (
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : isEdit ? 'Update' : 'Register'}
+            {loading ? 'Saving...' : isEdit ? 'Confirm & update' : 'Confirm & register'}
           </Button>
         )}
       </div>

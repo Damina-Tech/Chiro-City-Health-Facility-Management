@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +28,7 @@ import {
   uploadPendingStaffDocuments,
   type PendingLegalDocument,
 } from '@/components/registration/RegistrationLegalDocumentsSection';
+import { StaffRegistrationWizardPreview } from '@/components/registration/RegistrationWizardPreview';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react';
 
@@ -136,8 +137,17 @@ export default function StaffRegistrationPage() {
     loadStaffDocuments();
   }, [loadStaffDocuments]);
 
-  const totalSteps = STEPS.length;
+  const wizardSteps = useMemo(
+    () => [...STEPS, { id: 5, title: 'Review & submit', short: 'Review' as const }],
+    [],
+  );
+  const totalSteps = wizardSteps.length;
+  const isLastStep = step === totalSteps;
   const progress = (step / totalSteps) * 100;
+
+  useEffect(() => {
+    if (step > totalSteps) setStep(totalSteps);
+  }, [totalSteps, step]);
 
   useEffect(() => {
     facilitiesApi.list().then((list) => setFacilities(list.map((f) => ({ id: f.id, name: f.name }))));
@@ -310,21 +320,24 @@ export default function StaffRegistrationPage() {
 
       <div className="space-y-2">
         <div className="flex justify-between gap-1">
-          {STEPS.map((s) => (
-            <div
-              key={s.id}
-              className={`flex-1 flex flex-col items-center gap-1 ${s.id === step ? 'text-blue-600' : s.id < step ? 'text-green-600' : 'text-gray-400'}`}
-            >
+          {wizardSteps.map((s, idx) => {
+            const n = idx + 1;
+            return (
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border-2 ${
-                  s.id < step ? 'bg-green-500 text-white border-green-500' : s.id === step ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
-                }`}
+                key={`${s.short}-${idx}`}
+                className={`flex-1 flex flex-col items-center gap-1 ${n === step ? 'text-blue-600' : n < step ? 'text-green-600' : 'text-gray-400'}`}
               >
-                {s.id < step ? <Check className="h-4 w-4" /> : s.id}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border-2 ${
+                    n < step ? 'bg-green-500 text-white border-green-500' : n === step ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+                  }`}
+                >
+                  {n < step ? <Check className="h-4 w-4" /> : n}
+                </div>
+                <span className="text-xs font-medium hidden sm:inline">{s.short}</span>
               </div>
-              <span className="text-xs font-medium hidden sm:inline">{s.short}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <Progress value={progress} className="h-2" />
       </div>
@@ -343,7 +356,7 @@ export default function StaffRegistrationPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">{STEPS[step - 1].title}</CardTitle>
+          <CardTitle className="text-lg">{wizardSteps[step - 1]?.title ?? 'Review & submit'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 1 && (
@@ -516,6 +529,16 @@ export default function StaffRegistrationPage() {
               )}
             </>
           )}
+
+          {step === totalSteps && (
+            <StaffRegistrationWizardPreview
+              form={form}
+              facilityName={form.facilityId ? facilities.find((f) => f.id === form.facilityId)?.name : undefined}
+              pendingLegalDocs={pendingLegalDocs}
+              serverLegalDocs={serverLegalDocs}
+              isOfficer={isOfficer}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -523,13 +546,13 @@ export default function StaffRegistrationPage() {
         <Button variant="outline" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1}>
           <ArrowLeft className="h-4 w-4 mr-2" />Back
         </Button>
-        {step < totalSteps ? (
+        {!isLastStep ? (
           <Button onClick={() => setStep((s) => Math.min(totalSteps, s + 1))}>
             Next<ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : isEdit ? 'Update' : 'Register'}
+            {loading ? 'Saving...' : isEdit ? 'Confirm & update' : 'Confirm & register'}
           </Button>
         )}
       </div>

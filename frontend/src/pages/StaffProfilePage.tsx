@@ -17,6 +17,10 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { staffApi, documentsApi, type Staff, type StaffDocument, type StaffSpecificFields } from '@/services/api';
 import { StaffStatusUpdateDialog } from '@/components/staff/StaffStatusUpdateDialog';
 import {
+  StaffRoleSpecificFieldsDisplay,
+  STAFF_ROLE_LABELS,
+} from '@/components/staff/StaffRoleSpecificFieldsDisplay';
+import {
   ArrowLeft,
   MapPin,
   Phone,
@@ -240,12 +244,21 @@ export default function StaffProfilePage() {
                   <Building2 className="h-4 w-4 text-gray-500" /> {staff.facility.name}
                 </p>
               )}
-              {staff.specificFields && (
+              {(staff.staffRole || staff.specificFields) && (
                 <div className="pt-2 border-t">
-                  <p className="font-medium text-gray-600 mb-2">Role-specific</p>
-                  <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto whitespace-pre-wrap">
-                    {JSON.stringify(staff.specificFields, null, 2)}
-                  </pre>
+                  <p className="font-medium text-gray-600 mb-2">
+                    Role-specific
+                    {staff.staffRole && (
+                      <span className="font-normal text-muted-foreground">
+                        {' '}
+                        ({STAFF_ROLE_LABELS[staff.staffRole] ?? staff.staffRole})
+                      </span>
+                    )}
+                  </p>
+                  <StaffRoleSpecificFieldsDisplay
+                    staffRole={staff.staffRole}
+                    specificFields={staff.specificFields}
+                  />
                 </div>
               )}
             </CardContent>

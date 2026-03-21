@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -28,7 +34,7 @@ export class StaffService {
       `${dto.firstName} ${dto.lastName}`.trim() ||
       dto.employeeId;
     return {
-      employeeId: dto.employeeId,
+      employeeId: dto.employeeId.trim(),
       name,
       firstName: dto.firstName,
       lastName: dto.lastName,
@@ -60,8 +66,23 @@ export class StaffService {
       userRole === ROLES.OFFICER
         ? { ...dto, status: 'SUBMITTED' as const }
         : dto;
+    const employeeId = effectiveDto.employeeId.trim();
+    if (!employeeId) {
+      throw new BadRequestException('Employee ID cannot be empty');
+    }
+    const normalizedDto = { ...effectiveDto, employeeId };
+
+    const existingByEmployeeId = await this.prisma.staff.findUnique({
+      where: { employeeId },
+    });
+    if (existingByEmployeeId) {
+      throw new ConflictException(
+        `Staff ID "${employeeId}" is already in use. Use a different employee ID.`,
+      );
+    }
+
     const staff = await this.prisma.staff.create({
-      data: this.mapCreateData(effectiveDto, userId),
+      data: this.mapCreateData(normalizedDto, userId),
     });
     await this.audit.log({
       action: 'CREATE',
@@ -140,7 +161,23 @@ export class StaffService {
     }
 
     const data: any = {};
-    if (dto.employeeId !== undefined) data.employeeId = dto.employeeId;
+    if (dto.employeeId !== undefined) {
+      const newEmployeeId = dto.employeeId.trim();
+      if (!newEmployeeId) {
+        throw new BadRequestException('Employee ID cannot be empty');
+      }
+      if (newEmployeeId !== existing.employeeId) {
+        const taken = await this.prisma.staff.findUnique({
+          where: { employeeId: newEmployeeId },
+        });
+        if (taken) {
+          throw new ConflictException(
+            `Staff ID "${newEmployeeId}" is already in use. Use a different employee ID.`,
+          );
+        }
+      }
+      data.employeeId = newEmployeeId;
+    }
     if (dto.firstName !== undefined) data.firstName = dto.firstName;
     if (dto.lastName !== undefined) data.lastName = dto.lastName;
     if (dto.firstName !== undefined || dto.lastName !== undefined || dto.name !== undefined) {
