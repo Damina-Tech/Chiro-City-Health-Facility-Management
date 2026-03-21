@@ -27,7 +27,7 @@ export class StaffController {
   @UseGuards(PermissionsGuard)
   @RequirePermissions(PERMISSIONS.STAFF_CREATE)
   create(@Body() dto: CreateStaffDto, @CurrentUser() user: JwtPayload) {
-    return this.staffService.create(dto, user?.sub);
+    return this.staffService.create(dto, user?.sub, user?.role);
   }
 
   @Get()
@@ -65,7 +65,7 @@ export class StaffController {
     @Body() dto: UpdateStaffDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.staffService.update(id, dto, user?.sub);
+    return this.staffService.update(id, dto, user?.sub, user?.role);
   }
 
   @Delete(':id')

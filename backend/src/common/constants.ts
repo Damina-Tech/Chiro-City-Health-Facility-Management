@@ -72,6 +72,14 @@ export const PERMISSIONS = {
 
   NOTIFICATIONS_READ: 'notifications.read',
   NOTIFICATIONS_MARK_READ: 'notifications.markRead',
+
+  USERS_READ: 'users.read',
+  USERS_CREATE: 'users.create',
+  USERS_UPDATE: 'users.update',
+  USERS_DELETE: 'users.delete',
+
+  ROLES_READ: 'roles.read',
+  ROLES_UPDATE: 'roles.update',
 } as const;
 
 /** All permission values for seed (Admin gets these). */

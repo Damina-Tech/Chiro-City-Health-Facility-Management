@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "@/hooks/use-toast";
 import { useUsers, useNotifications } from "@/store";
 import {
   Building,
@@ -135,18 +136,11 @@ export default function SettingsPage() {
   });
 
   const handleSaveSettings = () => {
-    const newSettings = {
-      company: companySettings,
-      workingHours,
-      leaves: leaveSettings,
-      payroll: payrollSettings,
-      authentication: authSettings,
-      notifications: notificationSettings,
-    };
-
-    console.log("✅ Saved settings:", newSettings);
     setIsDirty(false);
-    alert("Settings saved successfully!");
+    toast({
+      title: "Settings saved",
+      description: "Your changes have been applied.",
+    });
   };
 
   const handleFormChange = () => {

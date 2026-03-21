@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 import { PERMISSIONS } from '@/constants/permissions';
 import {
   facilitiesApi,
@@ -89,8 +90,16 @@ export default function FacilityProfilePage() {
       setUploadFile(null);
       setUploadName('');
       setUploadType('other');
-    } catch {
-      // ignore
+      toast({
+        title: 'Document uploaded',
+        description: 'The file has been added to this facility.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Could not upload file.',
+        variant: 'destructive',
+      });
     }
     setUploading(false);
   };

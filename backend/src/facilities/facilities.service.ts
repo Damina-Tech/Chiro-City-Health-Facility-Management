@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ROLES } from '../common/constants';
 import { CreateFacilityDto } from './dto/create-facility.dto';
 import { UpdateFacilityDto } from './dto/update-facility.dto';
@@ -13,6 +14,7 @@ export class FacilitiesService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private notifications: NotificationsService,
   ) {}
 
   private serializeServices(services: string[] | undefined): string | null {
@@ -66,22 +68,27 @@ export class FacilitiesService {
   }
 
   async create(dto: CreateFacilityDto, userId?: string, userRole?: string) {
-    const status = dto.status || 'DRAFT';
-    if (userRole === ROLES.OFFICER && !OFFICER_ALLOWED_STATUSES.has(status)) {
-      throw new ForbiddenException(
-        'Officer can only register facilities with status DRAFT, PENDING, or SUBMITTED. Use SUBMITTED for approval request.',
-      );
+    /** Officer registrations are always submitted for admin approval; Admin keeps chosen/default status. */
+    let status = dto.status || 'DRAFT';
+    let approvalStatus = dto.approvalStatus ?? undefined;
+    if (userRole === ROLES.OFFICER) {
+      status = 'SUBMITTED';
+      approvalStatus = approvalStatus ?? 'PENDING';
     }
+
     const facility = await this.prisma.facility.create({
-      data: this.mapCreateDtoToData(dto, userId),
+      data: this.mapCreateDtoToData({ ...dto, status, approvalStatus }, userId),
     });
     await this.audit.log({
       action: 'CREATE',
       entity: 'Facility',
       entityId: facility.id,
       userId,
-      payload: { name: facility.name, type: facility.type },
+      payload: { name: facility.name, type: facility.type, status: facility.status },
     });
+    if (userRole === ROLES.OFFICER) {
+      await this.notifications.notifyPendingFacilityApproval(facility.id, facility.name);
+    }
     return facility;
   }
 

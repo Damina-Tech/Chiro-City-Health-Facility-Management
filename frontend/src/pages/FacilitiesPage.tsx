@@ -33,6 +33,7 @@ import {
 import { FacilityStatusUpdateDialog } from '@/components/facilities/FacilityStatusUpdateDialog';
 import { PERMISSIONS } from '@/constants/permissions';
 import { facilitiesApi, type Facility } from '@/services/api';
+import { toast } from '@/hooks/use-toast';
 import {
   Building2,
   Search,
@@ -106,17 +107,32 @@ export default function FacilitiesPage() {
 
   const handleConfirmDelete = async () => {
     if (!facilityToDelete) return;
+    const name = facilityToDelete.name;
     try {
       await facilitiesApi.delete(facilityToDelete.id);
       setDeleteDialogOpen(false);
       setFacilityToDelete(null);
       load();
+      toast({
+        title: 'Facility deleted',
+        description: `"${name}" has been removed.`,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.toLowerCase().includes('not found')) {
         setDeleteDialogOpen(false);
         setFacilityToDelete(null);
         load();
+        toast({
+          title: 'Already removed',
+          description: 'This facility is no longer in the list.',
+        });
+      } else {
+        toast({
+          title: 'Delete failed',
+          description: msg || 'Could not delete facility.',
+          variant: 'destructive',
+        });
       }
     }
   };

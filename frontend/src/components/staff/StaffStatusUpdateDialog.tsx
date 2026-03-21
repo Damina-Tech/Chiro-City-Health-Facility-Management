@@ -17,12 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { facilitiesApi } from '@/services/api';
+import { staffApi } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
 
+/** Admin can set any lifecycle status for staff. */
 const STATUS_OPTIONS_ALL = [
   'DRAFT',
-  'PENDING',
   'SUBMITTED',
   'APPROVED',
   'ACTIVE',
@@ -30,25 +30,27 @@ const STATUS_OPTIONS_ALL = [
   'SUSPENDED',
   'TERMINATED',
 ];
-const STATUS_OPTIONS_OFFICER = ['DRAFT', 'PENDING', 'SUBMITTED'];
 
-export interface FacilityStatusUpdateDialogProps {
+/** Matches backend: Officer may only use DRAFT or SUBMITTED. */
+const STATUS_OPTIONS_OFFICER = ['DRAFT', 'SUBMITTED'];
+
+export interface StaffStatusUpdateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  facilityId: string;
-  facilityName: string;
+  staffId: string;
+  staffName: string;
   currentStatus: string;
   onSuccess?: () => void;
 }
 
-export function FacilityStatusUpdateDialog({
+export function StaffStatusUpdateDialog({
   open,
   onOpenChange,
-  facilityId,
-  facilityName,
+  staffId,
+  staffName,
   currentStatus,
   onSuccess,
-}: FacilityStatusUpdateDialogProps) {
+}: StaffStatusUpdateDialogProps) {
   const { user } = useAuth();
   const [status, setStatus] = useState(currentStatus);
   const [saving, setSaving] = useState(false);
@@ -76,7 +78,7 @@ export function FacilityStatusUpdateDialog({
     setSaving(true);
     setError('');
     try {
-      await facilitiesApi.update(facilityId, { status });
+      await staffApi.update(staffId, { status });
       toast({
         title: 'Status updated',
         description: `Status is now ${status}.`,
@@ -99,9 +101,9 @@ export function FacilityStatusUpdateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Update facility status</DialogTitle>
+          <DialogTitle>Update staff status</DialogTitle>
           <DialogDescription>
-            Change the status for &quot;{facilityName}&quot;. Current status: <strong>{currentStatus}</strong>.
+            Change the status for &quot;{staffName}&quot;. Current status: <strong>{currentStatus}</strong>.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -124,7 +126,7 @@ export function FacilityStatusUpdateDialog({
             </Select>
             {user?.role === 'Officer' && (
               <p className="text-xs text-muted-foreground">
-                Officer can only set DRAFT, PENDING, or SUBMITTED. Admin approves or activates.
+                Officer can only set DRAFT or SUBMITTED. Admin approves or activates the record.
               </p>
             )}
           </div>
@@ -133,7 +135,7 @@ export function FacilityStatusUpdateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || status === currentStatus}>
+          <Button onClick={() => void handleSave()} disabled={saving || status === currentStatus}>
             {saving ? 'Saving...' : 'Update status'}
           </Button>
         </DialogFooter>

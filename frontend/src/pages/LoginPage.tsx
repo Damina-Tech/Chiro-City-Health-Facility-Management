@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { Building2, Chrome, Github, Loader2 } from 'lucide-react';
+import { firstAccessiblePathFromPermissions } from '@/lib/postLoginPath';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -23,11 +24,18 @@ const LoginPage: React.FC = () => {
     try {
       const success = await login(email, password);
       if (success) {
+        const stored = localStorage.getItem('hrms_user');
+        let perms: string[] | undefined;
+        try {
+          if (stored) perms = (JSON.parse(stored) as { permissions?: string[] }).permissions;
+        } catch {
+          perms = undefined;
+        }
         toast({
           title: "Login Successful",
           description: "Welcome to the HRMS dashboard!"
         });
-        navigate('/dashboard');
+        navigate(firstAccessiblePathFromPermissions(perms));
       } else {
         toast({
           title: "Login Failed",
@@ -51,11 +59,18 @@ const LoginPage: React.FC = () => {
     try {
       const success = await loginWithSSO(provider);
       if (success) {
+        const stored = localStorage.getItem('hrms_user');
+        let perms: string[] | undefined;
+        try {
+          if (stored) perms = (JSON.parse(stored) as { permissions?: string[] }).permissions;
+        } catch {
+          perms = undefined;
+        }
         toast({
           title: "SSO Login Successful",
           description: `Logged in with ${provider}`
         });
-        navigate('/dashboard');
+        navigate(firstAccessiblePathFromPermissions(perms));
       }
     } catch (error) {
       toast({

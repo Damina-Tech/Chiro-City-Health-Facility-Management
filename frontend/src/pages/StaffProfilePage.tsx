@@ -12,8 +12,10 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 import { PERMISSIONS } from '@/constants/permissions';
 import { staffApi, documentsApi, type Staff, type StaffDocument, type StaffSpecificFields } from '@/services/api';
+import { StaffStatusUpdateDialog } from '@/components/staff/StaffStatusUpdateDialog';
 import {
   ArrowLeft,
   MapPin,
@@ -24,6 +26,7 @@ import {
   Building2,
   Calendar,
   User,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function StaffProfilePage() {
@@ -38,6 +41,7 @@ export default function StaffProfilePage() {
   const [uploadName, setUploadName] = useState('');
   const [uploadType, setUploadType] = useState('other');
   const [uploading, setUploading] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 
   const canReadStaff = hasPermission(PERMISSIONS.STAFF_READ);
   const canUpdateStaff = hasPermission(PERMISSIONS.STAFF_UPDATE);
@@ -59,6 +63,11 @@ export default function StaffProfilePage() {
       .finally(() => setLoading(false));
   }, [id, canReadStaff, canListDocs]);
 
+  const refetchStaff = () => {
+    if (!id) return;
+    staffApi.get(id).then(setStaff).catch(() => setStaff(null));
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !uploadFile) return;
@@ -71,8 +80,16 @@ export default function StaffProfilePage() {
       setUploadFile(null);
       setUploadName('');
       setUploadType('other');
-    } catch {
-      // ignore
+      toast({
+        title: 'Document uploaded',
+        description: 'The file has been added to this staff record.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Could not upload file.',
+        variant: 'destructive',
+      });
     }
     setUploading(false);
   };
@@ -124,6 +141,18 @@ export default function StaffProfilePage() {
                 {staff.facility.name}
               </Badge>
             )}
+            {canUpdateStaff && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setStatusDialogOpen(true)}
+                title="Update status"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                Change status
+              </Button>
+            )}
           </p>
         </div>
         {canUpdateStaff && (
@@ -132,6 +161,17 @@ export default function StaffProfilePage() {
           </Button>
         )}
       </div>
+
+      {canUpdateStaff && (
+        <StaffStatusUpdateDialog
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          staffId={staff.id}
+          staffName={staff.name}
+          currentStatus={staff.status}
+          onSuccess={refetchStaff}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

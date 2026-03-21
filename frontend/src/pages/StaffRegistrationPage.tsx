@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PERMISSIONS } from '@/constants/permissions';
 import {
   staffApi,
@@ -20,7 +21,8 @@ import {
   type CreateStaffDto,
   type StaffSpecificFields,
 } from '@/services/api';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react';
 
 const STEPS = [
   { id: 1, title: 'Personal information', short: 'Personal' },
@@ -47,6 +49,8 @@ const GENDER_OPTIONS = [
   { value: 'OTHER', label: 'Other' },
 ];
 const STATUS_OPTIONS = ['DRAFT', 'ACTIVE', 'SUSPENDED', 'TERMINATED', 'SUBMITTED', 'APPROVED', 'INACTIVE'];
+/** Status values an Officer may assign; Admin can use full list. */
+const OFFICER_STAFF_STATUS_OPTIONS = ['DRAFT', 'SUBMITTED'];
 const NURSING_GRADES = ['JUNIOR', 'SENIOR', 'SPECIALIST'];
 
 type FormState = CreateStaffDto & { specificFields?: StaffSpecificFields };
@@ -93,7 +97,8 @@ function buildPayload(form: FormState): CreateStaffDto {
 export default function StaffRegistrationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const isOfficer = user?.role === 'Officer';
   const isEdit = Boolean(id);
   const canCreate = hasPermission(PERMISSIONS.STAFF_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.STAFF_UPDATE);
@@ -161,17 +166,36 @@ export default function StaffRegistrationPage() {
   const handleSubmit = async () => {
     setSubmitError('');
     setLoading(true);
-    const payload = buildPayload(form);
+    let payload = buildPayload(form);
+    if (isEdit && id && isOfficer && payload.status && !OFFICER_STAFF_STATUS_OPTIONS.includes(payload.status)) {
+      const { status: _omit, ...rest } = payload;
+      payload = rest as CreateStaffDto;
+    }
     try {
       if (isEdit && id) {
         await staffApi.update(id, payload);
+        toast({
+          title: 'Staff updated',
+          description: 'Changes have been saved successfully.',
+        });
         navigate(`/staff/${id}`);
       } else {
         const created = await staffApi.create(payload);
+        toast({
+          title: 'Staff registered',
+          description: isOfficer
+            ? 'Submitted as SUBMITTED — an admin will review and activate the record.'
+            : 'The staff record has been created.',
+        });
         navigate(`/staff/${created.id}`);
       }
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Failed to save');
+      toast({
+        title: 'Save failed',
+        description: err instanceof Error ? err.message : 'Failed to save',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -242,6 +266,16 @@ export default function StaffRegistrationPage() {
         <Progress value={progress} className="h-2" />
       </div>
 
+      {!isEdit && isOfficer && (
+        <Alert className="border-blue-200 bg-blue-50/80">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-900">Admin approval required</AlertTitle>
+          <AlertDescription className="text-blue-800">
+            New staff you register is saved as <strong>SUBMITTED</strong> until an administrator approves and sets the final status (e.g. ACTIVE).
+          </AlertDescription>
+        </Alert>
+      )}
+
       {submitError && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{submitError}</p>}
 
       <Card>
@@ -300,13 +334,39 @@ export default function StaffRegistrationPage() {
                 <div><Label>Join date</Label><Input type="date" value={form.joiningDate ?? ''} onChange={(e) => setForm((p) => ({ ...p, joiningDate: e.target.value }))} /></div>
                 <div>
                   <Label>Staff status</Label>
-                  <Select value={form.status ?? 'DRAFT'} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
+                  {!isEdit && isOfficer ? (
+                    <p className="text-sm text-muted-foreground border rounded-md px-3 py-2 bg-muted/50">
+                      Set automatically to <strong>SUBMITTED</strong> for admin approval.
+                    </p>
+                  ) : isEdit && isOfficer && form.status && !OFFICER_STAFF_STATUS_OPTIONS.includes(form.status) ? (
+                    <p className="text-sm border rounded-md px-3 py-2 bg-muted/50">
+                      Current status: <strong>{form.status}</strong> — only an administrator can change approval or activation.
+                    </p>
+                  ) : (
+                    <Select
+                      value={
+                        isOfficer
+                          ? OFFICER_STAFF_STATUS_OPTIONS.includes(form.status ?? '')
+                            ? (form.status ?? 'DRAFT')
+                            : 'DRAFT'
+                          : (form.status ?? 'DRAFT')
+                      }
+                      onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(isOfficer ? OFFICER_STAFF_STATUS_OPTIONS : STATUS_OPTIONS).map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
               <div><Label>Emergency contact</Label><Input value={form.emergencyContact ?? ''} onChange={(e) => setForm((p) => ({ ...p, emergencyContact: e.target.value }))} /></div>
+              <p className="text-xs text-muted-foreground">
+                To change staff status (e.g. approve or activate), use &quot;Change status&quot; on the staff profile or the status action on the staff directory list.
+              </p>
             </>
           )}
 

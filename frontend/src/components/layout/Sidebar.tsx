@@ -128,13 +128,13 @@ const adminItems = [
   title: 'User Management',
   icon: Shield,
   href: '/admin/users',
-  permission: '*'
+  permission: PERMISSIONS.USERS_READ
 },
 {
   title: 'System Settings',
   icon: Settings,
   href: '/admin/settings',
-  permission: '*'
+  permission: PERMISSIONS.USERS_READ
 }];
 
 

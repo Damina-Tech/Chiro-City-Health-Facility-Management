@@ -36,6 +36,12 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     }).then((res) => handleResponse<{ access_token: string; user: AuthUser }>(res)),
+
+  /** Fresh user + permissions from DB (call on app load so role changes apply without re-login). */
+  me: () =>
+    fetch(`${API_BASE}/auth/me`, { headers: headers() }).then((res) =>
+      handleResponse<AuthUser>(res),
+    ),
 };
 
 export interface AuthUser {
@@ -426,4 +432,85 @@ export const notificationsApi = {
       method: 'PUT',
       headers: headers(),
     }).then((res) => handleResponse<Notification>(res)),
+};
+
+// User management & RBAC
+export interface PermissionRecord {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoleWithPermissions {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: PermissionRecord[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedUser {
+  id: string;
+  email: string;
+  name: string;
+  roleId: string;
+  role: RoleWithPermissions;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateManagedUserDto {
+  email: string;
+  password: string;
+  name: string;
+  roleId: string;
+}
+
+export interface UpdateManagedUserDto {
+  email?: string;
+  name?: string;
+  roleId?: string;
+  password?: string;
+}
+
+export const usersApi = {
+  list: () =>
+    fetch(`${API_BASE}/users`, { headers: headers() }).then((res) => handleResponse<ManagedUser[]>(res)),
+  get: (id: string) =>
+    fetch(`${API_BASE}/users/${id}`, { headers: headers() }).then((res) => handleResponse<ManagedUser>(res)),
+  create: (body: CreateManagedUserDto) =>
+    fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then((res) => handleResponse<ManagedUser>(res)),
+  update: (id: string, body: UpdateManagedUserDto) =>
+    fetch(`${API_BASE}/users/${id}`, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then((res) => handleResponse<ManagedUser>(res)),
+  delete: (id: string) =>
+    fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      headers: headers(),
+    }).then((res) => handleResponse<{ deleted: boolean }>(res)),
+  listRoles: () =>
+    fetch(`${API_BASE}/users/roles`, { headers: headers() }).then((res) => handleResponse<RoleWithPermissions[]>(res)),
+  listPermissions: () =>
+    fetch(`${API_BASE}/users/permissions`, { headers: headers() }).then((res) =>
+      handleResponse<PermissionRecord[]>(res),
+    ),
+};
+
+export const rolesApi = {
+  updatePermissions: (roleId: string, permissionNames: string[]) =>
+    fetch(`${API_BASE}/roles/${roleId}/permissions`, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify({ permissionNames }),
+    }).then((res) => handleResponse<RoleWithPermissions>(res)),
 };

@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ROLES } from '../common/constants';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+
+/** Officer may only use these staff statuses; Admin approves (e.g. APPROVED / ACTIVE). */
+const OFFICER_ALLOWED_STAFF_STATUSES = new Set<string>(['DRAFT', 'SUBMITTED']);
 
 @Injectable()
 export class StaffService {
@@ -51,9 +55,13 @@ export class StaffService {
     };
   }
 
-  async create(dto: CreateStaffDto, userId?: string) {
+  async create(dto: CreateStaffDto, userId?: string, userRole?: string) {
+    const effectiveDto =
+      userRole === ROLES.OFFICER
+        ? { ...dto, status: 'SUBMITTED' as const }
+        : dto;
     const staff = await this.prisma.staff.create({
-      data: this.mapCreateData(dto, userId),
+      data: this.mapCreateData(effectiveDto, userId),
     });
     await this.audit.log({
       action: 'CREATE',
@@ -63,16 +71,19 @@ export class StaffService {
       userId,
       payload: { name: staff.name, employeeId: staff.employeeId },
     });
-    if (dto.facilityId) {
+    if (effectiveDto.facilityId) {
       await this.prisma.staffAssignment.create({
         data: {
           staffId: staff.id,
-          facilityId: dto.facilityId,
-          department: dto.departmentName ?? dto.department,
+          facilityId: effectiveDto.facilityId,
+          department: effectiveDto.departmentName ?? effectiveDto.department,
           assignedBy: userId,
         },
       });
-      await this.notifications.notifyStaffAssignment(staff.name, dto.facilityId, staff.name);
+      await this.notifications.notifyStaffAssignment(staff.name, effectiveDto.facilityId, staff.name);
+    }
+    if (userRole === ROLES.OFFICER) {
+      await this.notifications.notifyPendingStaffApproval(staff.id, staff.name, staff.employeeId);
     }
     return staff;
   }
@@ -118,9 +129,15 @@ export class StaffService {
     };
   }
 
-  async update(id: string, dto: UpdateStaffDto, userId?: string) {
+  async update(id: string, dto: UpdateStaffDto, userId?: string, userRole?: string) {
     const existing = await this.prisma.staff.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Staff not found');
+
+    if (dto.status !== undefined && userRole === ROLES.OFFICER && !OFFICER_ALLOWED_STAFF_STATUSES.has(dto.status)) {
+      throw new ForbiddenException(
+        'Officer can only set staff status to DRAFT or SUBMITTED. Only Admin can approve or activate.',
+      );
+    }
 
     const data: any = {};
     if (dto.employeeId !== undefined) data.employeeId = dto.employeeId;

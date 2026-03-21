@@ -61,4 +61,20 @@ export class AuthService {
       },
     };
   }
+
+  /** Current permissions from DB (JWT may be stale after role edits). */
+  async getProfile(userId: string): Promise<AuthUser> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: { include: { permissions: true } } },
+    });
+    if (!user) throw new UnauthorizedException();
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role.name,
+      permissions: user.role.permissions.map((p) => p.name),
+    };
+  }
 }

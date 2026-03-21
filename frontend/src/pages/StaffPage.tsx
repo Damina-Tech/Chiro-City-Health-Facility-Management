@@ -21,8 +21,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from '@/hooks/use-toast';
 import { PERMISSIONS } from '@/constants/permissions';
 import { staffApi, facilitiesApi, type Staff } from '@/services/api';
+import { StaffStatusUpdateDialog } from '@/components/staff/StaffStatusUpdateDialog';
 import {
   Users,
   Search,
@@ -32,6 +44,7 @@ import {
   Eye,
   Mail,
   Phone,
+  RefreshCw,
 } from 'lucide-react';
 
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'TERMINATED'];
@@ -45,6 +58,13 @@ export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [facilityFilter, setFacilityFilter] = useState('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [statusDialogStaff, setStatusDialogStaff] = useState<{
+    id: string;
+    name: string;
+    status: string;
+  } | null>(null);
 
   const canRead = hasPermission(PERMISSIONS.STAFF_READ);
   const canCreate = hasPermission(PERMISSIONS.STAFF_CREATE);
@@ -74,13 +94,29 @@ export default function StaffPage() {
     facilitiesApi.list().then((list) => setFacilities(list.map((f) => ({ id: f.id, name: f.name }))));
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this staff record?')) return;
+  const openDeleteDialog = (s: Staff) => {
+    setStaffToDelete({ id: s.id, name: s.name });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteStaff = async () => {
+    if (!staffToDelete) return;
+    const { id: deleteId, name: deletedName } = staffToDelete;
     try {
-      await staffApi.delete(id);
+      await staffApi.delete(deleteId);
+      setDeleteDialogOpen(false);
+      setStaffToDelete(null);
       loadStaff();
-    } catch {
-      // ignore
+      toast({
+        title: 'Staff removed',
+        description: `${deletedName} has been deleted.`,
+      });
+    } catch (err) {
+      toast({
+        title: 'Delete failed',
+        description: err instanceof Error ? err.message : 'Could not delete staff.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -260,20 +296,36 @@ export default function StaffPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           {canUpdate && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/staff/${s.id}/edit`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setStatusDialogStaff({
+                                    id: s.id,
+                                    name: s.name,
+                                    status: s.status,
+                                  })
+                                }
+                                title="Update status"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/staff/${s.id}/edit`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           {canDelete && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-red-600"
-                              onClick={() => handleDelete(s.id)}
+                              onClick={() => openDeleteDialog(s)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -291,6 +343,37 @@ export default function StaffPage() {
           )}
         </CardContent>
       </Card>
+
+      {statusDialogStaff && (
+        <StaffStatusUpdateDialog
+          open={!!statusDialogStaff}
+          onOpenChange={(open) => !open && setStatusDialogStaff(null)}
+          staffId={statusDialogStaff.id}
+          staffName={statusDialogStaff.name}
+          currentStatus={statusDialogStaff.status}
+          onSuccess={loadStaff}
+        />
+      )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete staff record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Permanently remove &quot;{staffToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setStaffToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleConfirmDeleteStaff()}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

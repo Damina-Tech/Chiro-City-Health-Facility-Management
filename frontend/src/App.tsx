@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Layout from "./components/layout/Layout";
+import { PERMISSIONS } from "./constants/permissions";
+import { firstAccessiblePath } from "./lib/postLoginPath";
 
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
@@ -58,9 +60,33 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Public Route Component (redirects to dashboard if authenticated)
+function PermissionRoute({
+  permission,
+  children,
+}: {
+  permission: string;
+  children: React.ReactNode;
+}) {
+  const { isLoading, hasPermission } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (!hasPermission(permission)) {
+    return <Navigate to={firstAccessiblePath(hasPermission)} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Public Route Component (redirects to first allowed page if authenticated)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, hasPermission } = useAuth();
 
   if (isLoading) {
     return (
@@ -82,7 +108,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     <>{children}</>
   ) : (
     <Navigate
-      to="/dashboard"
+      to={firstAccessiblePath(hasPermission)}
       replace
       data-id="k95po2qvw"
       data-path="src/App.tsx"
@@ -129,7 +155,11 @@ function AppRoutes() {
       >
         <Route
           path="dashboard"
-          element={<Dashboard data-id="2qf7vwrd4" data-path="src/App.tsx" />}
+          element={
+            <PermissionRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+              <Dashboard data-id="2qf7vwrd4" data-path="src/App.tsx" />
+            </PermissionRoute>
+          }
           data-id="uyypx0ak2"
           data-path="src/App.tsx"
         />

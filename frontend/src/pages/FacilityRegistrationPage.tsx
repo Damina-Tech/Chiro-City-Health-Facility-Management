@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PERMISSIONS } from '@/constants/permissions';
 import {
   facilitiesApi,
@@ -20,7 +21,8 @@ import {
   type CreateFacilityDto,
   type FacilitySpecificFields,
 } from '@/services/api';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { ArrowLeft, ArrowRight, Check, Info } from 'lucide-react';
 
 const STEPS = [
   { id: 1, title: 'Basic info', short: 'Basic' },
@@ -117,10 +119,13 @@ function buildPayload(form: FormState): CreateFacilityDto {
   return payload;
 }
 
+const OFFICER_FACILITY_STATUSES = ['DRAFT', 'PENDING', 'SUBMITTED'] as const;
+
 export default function FacilityRegistrationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const isOfficer = user?.role === 'Officer';
   const isEdit = Boolean(id);
   const canCreate = hasPermission(PERMISSIONS.FACILITIES_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.FACILITIES_UPDATE);
@@ -190,17 +195,36 @@ export default function FacilityRegistrationPage() {
   const handleSubmit = async () => {
     setSubmitError('');
     setLoading(true);
-    const payload = buildPayload(form);
+    let payload = buildPayload(form);
+    if (isEdit && id && isOfficer && payload.status && !OFFICER_FACILITY_STATUSES.includes(payload.status as (typeof OFFICER_FACILITY_STATUSES)[number])) {
+      const { status: _omitStatus, ...rest } = payload;
+      payload = rest as CreateFacilityDto;
+    }
     try {
       if (isEdit && id) {
         await facilitiesApi.update(id, payload);
+        toast({
+          title: 'Facility updated',
+          description: 'Changes have been saved successfully.',
+        });
         navigate(`/facilities/${id}`);
       } else {
         const created = await facilitiesApi.create(payload);
+        toast({
+          title: 'Facility registered',
+          description: isOfficer
+            ? 'Submitted as SUBMITTED — an admin will review and set the final status.'
+            : 'The facility has been created.',
+        });
         navigate(`/facilities/${created.id}`);
       }
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Failed to save');
+      toast({
+        title: 'Save failed',
+        description: err instanceof Error ? err.message : 'Failed to save',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -246,6 +270,17 @@ export default function FacilityRegistrationPage() {
           <p className="text-gray-600 text-sm mt-0.5">Step {step} of {totalSteps}</p>
         </div>
       </div>
+
+      {!isEdit && isOfficer && (
+        <Alert className="border-blue-200 bg-blue-50/80">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-900">Admin approval required</AlertTitle>
+          <AlertDescription className="text-blue-800">
+            When you finish registration, the system sets status to <strong>SUBMITTED</strong> and approval to{' '}
+            <strong>PENDING</strong>. An administrator will approve and assign the final status (e.g. APPROVED or ACTIVE).
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stepper */}
       <div className="space-y-2">

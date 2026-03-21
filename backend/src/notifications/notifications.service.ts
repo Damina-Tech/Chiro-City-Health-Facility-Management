@@ -59,6 +59,26 @@ export class NotificationsService {
     });
   }
 
+  async notifyPendingFacilityApproval(facilityId: string, facilityName: string) {
+    return this.create({
+      type: 'FACILITY_PENDING_APPROVAL',
+      title: 'Facility pending approval',
+      message: `"${facilityName}" was submitted by an officer and awaits admin approval.`,
+      channel: 'EMAIL',
+      metadata: { facilityId, facilityName },
+    });
+  }
+
+  async notifyPendingStaffApproval(staffId: string, staffName: string, employeeId: string) {
+    return this.create({
+      type: 'STAFF_PENDING_APPROVAL',
+      title: 'Staff pending approval',
+      message: `${staffName} (${employeeId}) was submitted by an officer and awaits admin approval.`,
+      channel: 'EMAIL',
+      metadata: { staffId, staffName, employeeId },
+    });
+  }
+
   async findAll(params?: { type?: string; limit?: number }) {
     return this.prisma.notification.findMany({
       where: params?.type ? { type: params.type } : undefined,
