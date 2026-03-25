@@ -432,6 +432,20 @@ export const notificationsApi = {
       method: 'PUT',
       headers: headers(),
     }).then((res) => handleResponse<Notification>(res)),
+  broadcast: (body: {
+    title: string;
+    message: string;
+    type?: string;
+    audience: 'ALL' | 'ROLE';
+    role?: string;
+    inApp: boolean;
+    email: boolean;
+  }) =>
+    fetch(`${API_BASE}/notifications/broadcast`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(body),
+    }).then((res) => handleResponse<{ created: number; recipients: number }>(res)),
 };
 
 // User management & RBAC

@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
+import { notificationsApi, type Notification as ApiNotification } from "@/services/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +59,23 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
 
   const role = user?.role;
   const roleNorm = (role ?? "").toUpperCase();
+  // Backend (system) notifications
+  const [apiNotifications, setApiNotifications] = React.useState<ApiNotification[]>([]);
+  React.useEffect(() => {
+    let mounted = true;
+    notificationsApi
+      .list({ limit: 10 })
+      .then((data) => {
+        if (mounted) setApiNotifications(data);
+      })
+      .catch(() => {
+        if (mounted) setApiNotifications([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const visibleNotifications = React.useMemo(() => {
     if (!roleNorm) {
       return storeNotifications.filter((n) => n.audience.type === "all");
@@ -68,8 +86,12 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
         : n.audience.roles.some((r) => r.toUpperCase() === roleNorm)
     );
   }, [roleNorm, storeNotifications]);
-  const unreadCount = visibleNotifications.filter((n) => !n.isRead).length;
-  const recent = visibleNotifications.slice(0, 6);
+
+  const unreadCount =
+    visibleNotifications.filter((n) => !n.isRead).length +
+    apiNotifications.filter((n) => !n.readAt).length;
+  const recentInApp = visibleNotifications.slice(0, 4);
+  const recentApi = apiNotifications.slice(0, 4);
 
   return (
     <header
@@ -236,49 +258,54 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                 data-id="3dt2r6psc"
                 data-path="src/components/layout/Header.tsx"
               />
-              {recent.length === 0 ? (
+              {recentInApp.length === 0 && recentApi.length === 0 ? (
                 <div className="p-4 text-sm text-muted-foreground">
                   No notifications
                 </div>
               ) : (
-              recent.map((notification) => (
-                <DropdownMenuItem
-                  key={notification.id}
-                  className="flex flex-col items-start p-4"
-                  data-id="gc9a8fb34"
-                  data-path="src/components/layout/Header.tsx"
-                >
-                  <div
-                    className="flex items-center justify-between w-full"
-                    data-id="ekzs09m9k"
-                    data-path="src/components/layout/Header.tsx"
-                  >
-                    <p
-                      className={`text-sm ${
-                        !notification.isRead ? "font-medium" : "text-gray-600 dark:text-gray-300"
-                      }`}
-                      data-id="ulju4jo6b"
-                      data-path="src/components/layout/Header.tsx"
+                <>
+                  {recentApi.map((n) => (
+                    <DropdownMenuItem
+                      key={`api-${n.id}`}
+                      className="flex flex-col items-start p-4"
                     >
-                      {notification.title}
-                    </p>
-                    {!notification.isRead && (
-                      <div
-                        className="h-2 w-2 bg-blue-600 rounded-full"
-                        data-id="c6fgg2mmo"
-                        data-path="src/components/layout/Header.tsx"
-                      ></div>
-                    )}
-                  </div>
-                  <p
-                    className="text-xs text-gray-500 mt-1"
-                    data-id="t23dcthx9"
-                    data-path="src/components/layout/Header.tsx"
-                  >
-                    {notification.message}
-                  </p>
-                </DropdownMenuItem>
-              )))}
+                      <div className="flex items-center justify-between w-full">
+                        <p
+                          className={`text-sm ${!n.readAt ? "font-medium" : "text-gray-600 dark:text-gray-300"}`}
+                        >
+                          {n.title}
+                        </p>
+                        {!n.readAt && <div className="h-2 w-2 bg-blue-600 rounded-full" />}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{n.message}</p>
+                    </DropdownMenuItem>
+                  ))}
+                  {recentInApp.map((notification) => (
+                    <DropdownMenuItem
+                      key={`app-${notification.id}`}
+                      className="flex flex-col items-start p-4"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <p
+                          className={`text-sm ${
+                            !notification.isRead
+                              ? "font-medium"
+                              : "text-gray-600 dark:text-gray-300"
+                          }`}
+                        >
+                          {notification.title}
+                        </p>
+                        {!notification.isRead && (
+                          <div className="h-2 w-2 bg-blue-600 rounded-full" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {notification.message}
+                      </p>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
               <DropdownMenuSeparator
                 data-id="mrdrykd8c"
                 data-path="src/components/layout/Header.tsx"

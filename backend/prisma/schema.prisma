@@ -40,6 +40,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  notificationRecipients NotificationRecipient[]
+
   @@map("users")
 }
 
@@ -190,7 +192,23 @@ model Notification {
   metadata  String?  // JSON
   createdAt DateTime @default(now())
 
+  recipients NotificationRecipient[]
+
   @@map("notifications")
+}
+
+model NotificationRecipient {
+  id             String       @id @default(uuid())
+  notificationId String
+  userId         String
+  deliveredAt    DateTime     @default(now())
+  readAt         DateTime?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+  @@map("notification_recipients")
 }
 
 // ============ Audit ============

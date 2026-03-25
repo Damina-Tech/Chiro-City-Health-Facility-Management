@@ -28,9 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useStore } from "@/store";
 import { useAuth } from "@/contexts/AuthContext";
-import { PERMISSIONS } from "@/constants/permissions";
 import {
   Bell,
   BellOff,
@@ -62,40 +60,40 @@ const ROLE_OPTIONS = [
 ] as const;
 
 export default function NotificationsPage() {
-  // System notifications from API (license expiry, staff assignment, facility activation)
+  // Notifications from API (per-user inbox)
   const [apiNotifications, setApiNotifications] = useState<ApiNotification[]>([]);
-  useEffect(() => {
-    notificationsApi.list({ limit: 20 }).then(setApiNotifications).catch(() => setApiNotifications([]));
-  }, []);
 
   // Auth / permissions
   const { user, hasPermission } = useAuth();
   const role = user?.role;
-  const roleNorm = (role ?? "").toUpperCase();
   const canManageNotifications =
     (user?.role ?? "").toUpperCase() === "ADMIN" ||
     hasPermission("admin") ||
     hasPermission("*");
 
-  const canMarkSystemRead =
-    hasPermission(PERMISSIONS.NOTIFICATIONS_MARK_READ) ||
-    hasPermission("admin") ||
-    hasPermission("*");
+  const refresh = React.useCallback(() => {
+    notificationsApi
+      .list({ limit: 50 })
+      .then(setApiNotifications)
+      .catch(() => setApiNotifications([]));
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const markApiRead = (id: string) => {
-    if (!canMarkSystemRead) return;
-    notificationsApi.markRead(id).then(() => {
-      setApiNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
-    });
+    notificationsApi
+      .markRead(id)
+      .then((updated) => {
+        setApiNotifications((prev) =>
+          prev.map((n) => (n.id === id ? updated : n)),
+        );
+      })
+      .catch(() => {
+        // ignore; backend enforces access
+      });
   };
-
-  // Local notification list state
-  const storeNotifications = useStore((s) => s.notifications);
-  const sendManualNotification = useStore((s) => s.sendManualNotification);
-  const markAsRead = useStore((s) => s.markAsRead);
-  const markAllAsRead = useStore((s) => s.markAllAsRead);
-  const clearNotifications = useStore((s) => s.clearNotifications);
-  const removeNotification = useStore((s) => s.removeNotification);
 
   // Filter state
   const [filter, setFilter] = useState<
@@ -153,40 +151,49 @@ export default function NotificationsPage() {
     },
   });
 
-  const visibleNotifications = React.useMemo(() => {
-    if (!roleNorm) {
-      return storeNotifications.filter((n) => n.audience.type === "all");
-    }
-    return storeNotifications.filter((n) =>
-      n.audience.type === "all"
-        ? true
-        : n.audience.roles.some((r) => r.toUpperCase() === roleNorm)
-    );
-  }, [roleNorm, storeNotifications]);
+  const toUiType = (backendType: string | null | undefined): NotificationType => {
+    const t = (backendType || "").toLowerCase();
+    if (t.includes("error") || t.includes("failed")) return "error";
+    if (t.includes("warn") || t.includes("expiry") || t.includes("pending")) return "warning";
+    if (t.includes("success") || t.includes("approved") || t.includes("activated")) return "success";
+    return "info";
+  };
 
-  // Filtered notifications list
-  const filteredNotifications = visibleNotifications.filter((notification) => {
-    if (filter === "unread") return !notification.isRead;
-    if (filter === "read") return notification.isRead;
-    if (filter !== "all" && filter !== notification.type) return false;
+  const filteredApi = apiNotifications.filter((n) => {
+    const uiType = toUiType(n.type);
+    const isRead = Boolean(n.readAt);
+    if (filter === "unread") return !isRead;
+    if (filter === "read") return isRead;
+    if (filter !== "all" && filter !== uiType) return false;
     return true;
   });
 
+  // Filtered notifications list
+  const filteredNotifications = filteredApi.map((n) => ({
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    type: toUiType(n.type),
+    isRead: Boolean(n.readAt),
+    createdAt: new Date(n.createdAt),
+  }));
+
   // Unread count
-  const unreadCount = visibleNotifications.filter((n) => !n.isRead).length;
+  const unreadCount = apiNotifications.filter((n) => !n.readAt).length;
 
   // Stats for display
   const stats = {
-    total: visibleNotifications.length,
+    total: apiNotifications.length,
     unread: unreadCount,
-    today: visibleNotifications.filter(
+    today: apiNotifications.filter(
       (n) =>
-        format(n.createdAt, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
+        format(new Date(n.createdAt), "yyyy-MM-dd") ===
+        format(new Date(), "yyyy-MM-dd")
     ).length,
-    thisWeek: visibleNotifications.filter((n) => {
+    thisWeek: apiNotifications.filter((n) => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      return n.createdAt >= weekAgo;
+      return new Date(n.createdAt) >= weekAgo;
     }).length,
   };
 
@@ -223,26 +230,27 @@ export default function NotificationsPage() {
       return;
     }
 
-    if (notificationForm.channels.inApp) {
-      sendManualNotification({
+    if (!canManageNotifications) return;
+
+    void notificationsApi
+      .broadcast({
         title: notificationForm.title,
         message: notificationForm.message,
-        type: notificationForm.type,
-        actionUrl: "/notifications",
-        audience:
+        type: "ANNOUNCEMENT",
+        audience: notificationForm.recipientTarget === "all" ? "ALL" : "ROLE",
+        role:
           notificationForm.recipientTarget === "all"
-            ? { type: "all" }
-            : { type: "roles", roles: [notificationForm.role] },
+            ? undefined
+            : notificationForm.role,
+        inApp: true,
+        email: false,
+      })
+      .then(() => {
+        refresh();
+      })
+      .catch(() => {
+        // ignore; backend enforces admin-only
       });
-    }
-
-    // Simulate sending via other channels
-    if (notificationForm.channels.email) {
-      console.log("Sending email notification...");
-    }
-    if (notificationForm.channels.push) {
-      console.log("Sending push notification...");
-    }
 
     setSendDialog(false);
     setNotificationForm({
@@ -260,16 +268,16 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllAsRead = () => {
-    markAllAsRead();
+    // Backend doesn't currently provide a bulk mark-read endpoint; mark read on click.
   };
 
   const handleClearAll = () => {
     if (!canManageNotifications) return;
-    clearNotifications();
+    // No backend delete/clear endpoint yet; keep UI hidden for now.
   };
 
   const handleMarkAsRead = (id: string) => {
-    markAsRead(id);
+    markApiRead(id);
   };
 
   return (
@@ -331,7 +339,7 @@ export default function NotificationsPage() {
                       {format(new Date(n.createdAt), "MMM d, yyyy HH:mm")} · {n.type}
                     </p>
                   </div>
-                  {!n.readAt && canMarkSystemRead && (
+                  {!n.readAt && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -494,10 +502,9 @@ export default function NotificationsPage() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!canManageNotifications) return;
-                        removeNotification(notification.id);
+                        // No backend delete endpoint yet
                       }}
-                      disabled={!canManageNotifications}
+                      disabled
                     >
                       ×
                     </Button>
@@ -890,13 +897,6 @@ export default function NotificationsPage() {
               </Button>
               <Button
                 onClick={() => {
-                  sendManualNotification({
-                    title: "Settings Saved",
-                    message: "Your notification preferences have been updated",
-                    type: "success",
-                    actionUrl: "/notifications",
-                    audience: role ? { type: "roles", roles: [role] } : { type: "all" },
-                  });
                   setSettingsDialog(false);
                 }}
               >
