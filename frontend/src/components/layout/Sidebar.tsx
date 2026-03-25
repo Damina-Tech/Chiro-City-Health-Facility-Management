@@ -169,7 +169,7 @@ const menuItems: SidebarItem[] = [
   title: 'Notifications',
   icon: Bell,
   href: '/notifications',
-  permission: 'notifications.view'
+  permission: PERMISSIONS.NOTIFICATIONS_READ
 }];
 
 

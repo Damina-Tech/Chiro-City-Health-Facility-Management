@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { useStore } from "@/store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,33 +48,28 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const storeNotifications = useStore((s) => s.notifications);
+  const markAllAsRead = useStore((s) => s.markAllAsRead);
 
   const setLanguage = (lng: SupportedLanguage) => {
     void i18n.changeLanguage(lng);
   };
 
-  const notifications = [
-    {
-      id: 1,
-      message: "New leave request from Alice Employee",
-      time: "5 min ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      message: "Payroll processing completed",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      message: "Monthly report is ready",
-      time: "2 hours ago",
-      unread: false,
-    },
-  ];
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const role = user?.role;
+  const roleNorm = (role ?? "").toUpperCase();
+  const visibleNotifications = React.useMemo(() => {
+    if (!roleNorm) {
+      return storeNotifications.filter((n) => n.audience.type === "all");
+    }
+    return storeNotifications.filter((n) =>
+      n.audience.type === "all"
+        ? true
+        : n.audience.roles.some((r) => r.toUpperCase() === roleNorm)
+    );
+  }, [roleNorm, storeNotifications]);
+  const unreadCount = visibleNotifications.filter((n) => !n.isRead).length;
+  const recent = visibleNotifications.slice(0, 6);
 
   return (
     <header
@@ -228,6 +225,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                   variant="ghost"
                   size="sm"
                   className="text-xs"
+                  onClick={markAllAsRead}
                   data-id="ms1kqkmqx"
                   data-path="src/components/layout/Header.tsx"
                 >
@@ -238,7 +236,12 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                 data-id="3dt2r6psc"
                 data-path="src/components/layout/Header.tsx"
               />
-              {notifications.map((notification) => (
+              {recent.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground">
+                  No notifications
+                </div>
+              ) : (
+              recent.map((notification) => (
                 <DropdownMenuItem
                   key={notification.id}
                   className="flex flex-col items-start p-4"
@@ -252,14 +255,14 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                   >
                     <p
                       className={`text-sm ${
-                        notification.unread ? "font-medium" : "text-gray-600"
+                        !notification.isRead ? "font-medium" : "text-gray-600 dark:text-gray-300"
                       }`}
                       data-id="ulju4jo6b"
                       data-path="src/components/layout/Header.tsx"
                     >
-                      {notification.message}
+                      {notification.title}
                     </p>
-                    {notification.unread && (
+                    {!notification.isRead && (
                       <div
                         className="h-2 w-2 bg-blue-600 rounded-full"
                         data-id="c6fgg2mmo"
@@ -272,16 +275,17 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                     data-id="t23dcthx9"
                     data-path="src/components/layout/Header.tsx"
                   >
-                    {notification.time}
+                    {notification.message}
                   </p>
                 </DropdownMenuItem>
-              ))}
+              )))}
               <DropdownMenuSeparator
                 data-id="mrdrykd8c"
                 data-path="src/components/layout/Header.tsx"
               />
               <DropdownMenuItem
                 className="text-center text-blue-600 hover:text-blue-700"
+                onClick={() => navigate("/notifications")}
                 data-id="0ay0omfwu"
                 data-path="src/components/layout/Header.tsx"
               >

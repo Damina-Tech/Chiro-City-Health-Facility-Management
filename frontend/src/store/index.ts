@@ -62,9 +62,12 @@ export const useNotifications = () => useStore((state) => ({
   notifications: state.notifications,
   unreadCount: state.unreadCount,
   addNotification: state.addNotification,
+  sendManualNotification: state.sendManualNotification,
+  addSystemNotification: state.addSystemNotification,
   markAsRead: state.markAsRead,
   markAllAsRead: state.markAllAsRead,
-  clearNotifications: state.clearNotifications
+  clearNotifications: state.clearNotifications,
+  removeNotification: state.removeNotification
 }));
 
 export const useTimesheet = () => useStore((state) => ({

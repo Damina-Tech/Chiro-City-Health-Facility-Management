@@ -28,7 +28,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useNotifications } from "@/store";
+import { useStore } from "@/store";
+import { useAuth } from "@/contexts/AuthContext";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
   Bell,
   BellOff,
@@ -47,14 +49,17 @@ import {
 import { format } from "date-fns";
 type NotificationType = "info" | "success" | "warning" | "error";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  isRead: boolean;
-  createdAt: Date;
-}
+type RecipientTarget = "all" | "role";
+
+const ROLE_OPTIONS = [
+  { value: "STAFF", label: "Staff" },
+  { value: "DOCTOR", label: "Doctor" },
+  { value: "NURSE", label: "Nurse" },
+  { value: "PHARMACIST", label: "Pharmacist" },
+  { value: "LAB_TECH", label: "Lab tech" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "OFFICER", label: "Officer" },
+] as const;
 
 export default function NotificationsPage() {
   // System notifications from API (license expiry, staff assignment, facility activation)
@@ -63,14 +68,34 @@ export default function NotificationsPage() {
     notificationsApi.list({ limit: 20 }).then(setApiNotifications).catch(() => setApiNotifications([]));
   }, []);
 
+  // Auth / permissions
+  const { user, hasPermission } = useAuth();
+  const role = user?.role;
+  const roleNorm = (role ?? "").toUpperCase();
+  const canManageNotifications =
+    (user?.role ?? "").toUpperCase() === "ADMIN" ||
+    hasPermission("admin") ||
+    hasPermission("*");
+
+  const canMarkSystemRead =
+    hasPermission(PERMISSIONS.NOTIFICATIONS_MARK_READ) ||
+    hasPermission("admin") ||
+    hasPermission("*");
+
   const markApiRead = (id: string) => {
+    if (!canMarkSystemRead) return;
     notificationsApi.markRead(id).then(() => {
       setApiNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
     });
   };
 
   // Local notification list state
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const storeNotifications = useStore((s) => s.notifications);
+  const sendManualNotification = useStore((s) => s.sendManualNotification);
+  const markAsRead = useStore((s) => s.markAsRead);
+  const markAllAsRead = useStore((s) => s.markAllAsRead);
+  const clearNotifications = useStore((s) => s.clearNotifications);
+  const removeNotification = useStore((s) => s.removeNotification);
 
   // Filter state
   const [filter, setFilter] = useState<
@@ -86,7 +111,8 @@ export default function NotificationsPage() {
     title: "",
     message: "",
     type: "info" as NotificationType,
-    recipients: "all",
+    recipientTarget: "all" as RecipientTarget,
+    role: "STAFF",
     channels: {
       inApp: true,
       email: false,
@@ -127,40 +153,19 @@ export default function NotificationsPage() {
     },
   });
 
-  // Add notification helper
-  const addNotification = (
-    notif: Omit<Notification, "id" | "isRead" | "createdAt">
-  ) => {
-    setNotifications((prev) => [
-      ...prev,
-      {
-        ...notif,
-        id: Date.now().toString(),
-        isRead: false,
-        createdAt: new Date(),
-      },
-    ]);
-  };
-
-  // Mark as read
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+  const visibleNotifications = React.useMemo(() => {
+    if (!roleNorm) {
+      return storeNotifications.filter((n) => n.audience.type === "all");
+    }
+    return storeNotifications.filter((n) =>
+      n.audience.type === "all"
+        ? true
+        : n.audience.roles.some((r) => r.toUpperCase() === roleNorm)
     );
-  };
-
-  // Mark all read
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
-
-  // Clear all notifications
-  const clearNotifications = () => {
-    setNotifications([]);
-  };
+  }, [roleNorm, storeNotifications]);
 
   // Filtered notifications list
-  const filteredNotifications = notifications.filter((notification) => {
+  const filteredNotifications = visibleNotifications.filter((notification) => {
     if (filter === "unread") return !notification.isRead;
     if (filter === "read") return notification.isRead;
     if (filter !== "all" && filter !== notification.type) return false;
@@ -168,17 +173,17 @@ export default function NotificationsPage() {
   });
 
   // Unread count
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = visibleNotifications.filter((n) => !n.isRead).length;
 
   // Stats for display
   const stats = {
-    total: notifications.length,
+    total: visibleNotifications.length,
     unread: unreadCount,
-    today: notifications.filter(
+    today: visibleNotifications.filter(
       (n) =>
         format(n.createdAt, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
     ).length,
-    thisWeek: notifications.filter((n) => {
+    thisWeek: visibleNotifications.filter((n) => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return n.createdAt >= weekAgo;
@@ -215,19 +220,21 @@ export default function NotificationsPage() {
   // Handle sending notification
   const handleSendNotification = () => {
     if (!notificationForm.title || !notificationForm.message) {
-      addNotification({
-        title: "Missing Information",
-        message: "Please provide title and message",
-        type: "error",
-      });
       return;
     }
 
-    addNotification({
-      title: notificationForm.title,
-      message: notificationForm.message,
-      type: notificationForm.type,
-    });
+    if (notificationForm.channels.inApp) {
+      sendManualNotification({
+        title: notificationForm.title,
+        message: notificationForm.message,
+        type: notificationForm.type,
+        actionUrl: "/notifications",
+        audience:
+          notificationForm.recipientTarget === "all"
+            ? { type: "all" }
+            : { type: "roles", roles: [notificationForm.role] },
+      });
+    }
 
     // Simulate sending via other channels
     if (notificationForm.channels.email) {
@@ -237,18 +244,13 @@ export default function NotificationsPage() {
       console.log("Sending push notification...");
     }
 
-    addNotification({
-      title: "Notification Sent",
-      message: `Notification sent to ${notificationForm.recipients} recipients`,
-      type: "success",
-    });
-
     setSendDialog(false);
     setNotificationForm({
       title: "",
       message: "",
       type: "info",
-      recipients: "all",
+      recipientTarget: "all",
+      role: "STAFF",
       channels: {
         inApp: true,
         email: false,
@@ -259,20 +261,11 @@ export default function NotificationsPage() {
 
   const handleMarkAllAsRead = () => {
     markAllAsRead();
-    addNotification({
-      title: "All Marked as Read",
-      message: "All notifications have been marked as read",
-      type: "success",
-    });
   };
 
   const handleClearAll = () => {
+    if (!canManageNotifications) return;
     clearNotifications();
-    addNotification({
-      title: "Notifications Cleared",
-      message: "All notifications have been cleared",
-      type: "success",
-    });
   };
 
   const handleMarkAsRead = (id: string) => {
@@ -297,14 +290,16 @@ export default function NotificationsPage() {
               </Button>
             </DialogTrigger>
           </Dialog>
-          <Dialog open={sendDialog} onOpenChange={setSendDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Send className="mr-2 h-4 w-4" />
-                Send Notification
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+          {canManageNotifications && (
+            <Dialog open={sendDialog} onOpenChange={setSendDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Notification
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -336,7 +331,7 @@ export default function NotificationsPage() {
                       {format(new Date(n.createdAt), "MMM d, yyyy HH:mm")} · {n.type}
                     </p>
                   </div>
-                  {!n.readAt && (
+                  {!n.readAt && canMarkSystemRead && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -411,7 +406,7 @@ export default function NotificationsPage() {
             <div className="flex gap-2">
               <Select
                 value={filter}
-                // onValueChange={setFilter}
+                onValueChange={(v) => setFilter(v as typeof filter)}
               >
                 <SelectTrigger className="w-32">
                   <Filter className="mr-2 h-4 w-4" />
@@ -436,9 +431,11 @@ export default function NotificationsPage() {
                   Mark All Read
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={handleClearAll}>
-                Clear All
-              </Button>
+              {canManageNotifications && (
+                <Button variant="outline" size="sm" onClick={handleClearAll}>
+                  Clear All
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -495,10 +492,12 @@ export default function NotificationsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      // onClick={(e) => {
-                      //   e.stopPropagation();
-                      //   removeNotification(notification.id);
-                      // }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!canManageNotifications) return;
+                        removeNotification(notification.id);
+                      }}
+                      disabled={!canManageNotifications}
                     >
                       ×
                     </Button>
@@ -510,7 +509,8 @@ export default function NotificationsPage() {
         </CardContent>
       </Card>
 
-      {/* Send Notification Dialog */}
+      {/* Send Notification Dialog (admin only) */}
+      {canManageNotifications && (
       <Dialog open={sendDialog} onOpenChange={setSendDialog}>
         <DialogContent>
           <DialogHeader>
@@ -554,9 +554,12 @@ export default function NotificationsPage() {
                 <Label htmlFor="type">Type</Label>
                 <Select
                   value={notificationForm.type}
-                  // onValueChange={(value) =>
-                  //   setNotificationForm((prev) => ({ ...prev, type: value }))
-                  // }
+                  onValueChange={(value) =>
+                    setNotificationForm((prev) => ({
+                      ...prev,
+                      type: value as NotificationType,
+                    }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -572,11 +575,11 @@ export default function NotificationsPage() {
               <div>
                 <Label htmlFor="recipients">Recipients</Label>
                 <Select
-                  value={notificationForm.recipients}
+                  value={notificationForm.recipientTarget}
                   onValueChange={(value) =>
                     setNotificationForm((prev) => ({
                       ...prev,
-                      recipients: value,
+                      recipientTarget: value as RecipientTarget,
                     }))
                   }
                 >
@@ -585,13 +588,34 @@ export default function NotificationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Users</SelectItem>
-                    <SelectItem value="managers">Managers Only</SelectItem>
-                    <SelectItem value="hr">HR Team</SelectItem>
-                    <SelectItem value="department">Department</SelectItem>
+                    <SelectItem value="role">By Role</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {notificationForm.recipientTarget === "role" && (
+              <div>
+                <Label>Target role</Label>
+                <Select
+                  value={notificationForm.role}
+                  onValueChange={(value) =>
+                    setNotificationForm((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Delivery Channels</Label>
               <div className="space-y-3 mt-2">
@@ -654,6 +678,7 @@ export default function NotificationsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Settings Dialog */}
       <Dialog open={settingsDialog} onOpenChange={setSettingsDialog}>
@@ -865,10 +890,12 @@ export default function NotificationsPage() {
               </Button>
               <Button
                 onClick={() => {
-                  addNotification({
+                  sendManualNotification({
                     title: "Settings Saved",
                     message: "Your notification preferences have been updated",
                     type: "success",
+                    actionUrl: "/notifications",
+                    audience: role ? { type: "roles", roles: [role] } : { type: "all" },
                   });
                   setSettingsDialog(false);
                 }}
