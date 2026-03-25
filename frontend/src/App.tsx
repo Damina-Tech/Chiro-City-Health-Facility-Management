@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Layout from "./components/layout/Layout";
@@ -316,20 +317,29 @@ function AppRoutes() {
 }
 
 const App = () => (
-  <QueryClientProvider
-    client={queryClient}
-    data-id="t05dmonz4"
+  <ThemeProvider
+    attribute="class"
+    defaultTheme="system"
+    enableSystem
+    disableTransitionOnChange
+    data-id="t7g0u6w7f"
     data-path="src/App.tsx"
   >
-    <TooltipProvider data-id="mobcb0b0n" data-path="src/App.tsx">
-      <AuthProvider data-id="l2tksbrmp" data-path="src/App.tsx">
-        <BrowserRouter data-id="lopawu7zf" data-path="src/App.tsx">
-          <AppRoutes data-id="uqfa9bkfo" data-path="src/App.tsx" />
-        </BrowserRouter>
-      </AuthProvider>
-      <Toaster data-id="u7pxvax50" data-path="src/App.tsx" />
-    </TooltipProvider>
-  </QueryClientProvider>
+    <QueryClientProvider
+      client={queryClient}
+      data-id="t05dmonz4"
+      data-path="src/App.tsx"
+    >
+      <TooltipProvider data-id="mobcb0b0n" data-path="src/App.tsx">
+        <AuthProvider data-id="l2tksbrmp" data-path="src/App.tsx">
+          <BrowserRouter data-id="lopawu7zf" data-path="src/App.tsx">
+            <AppRoutes data-id="uqfa9bkfo" data-path="src/App.tsx" />
+          </BrowserRouter>
+        </AuthProvider>
+        <Toaster data-id="u7pxvax50" data-path="src/App.tsx" />
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

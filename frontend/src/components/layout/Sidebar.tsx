@@ -150,19 +150,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
   );
 
   return (
-    <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
+    <div className={`bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ${
     isCollapsed ? 'w-16' : 'w-64'} h-full flex flex-col`
     } data-id="3ce1ss1zx" data-path="src/components/layout/Sidebar.tsx">
       {/* Logo */}
-      <div className="p-4 border-b border-gray-200" data-id="n4gahyf58" data-path="src/components/layout/Sidebar.tsx">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800" data-id="n4gahyf58" data-path="src/components/layout/Sidebar.tsx">
         <div className="flex items-center space-x-3" data-id="trw5ahq22" data-path="src/components/layout/Sidebar.tsx">
           <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center" data-id="cr39wgsho" data-path="src/components/layout/Sidebar.tsx">
             <Building2 className="h-5 w-5 text-white" data-id="4s2kuqqzd" data-path="src/components/layout/Sidebar.tsx" />
           </div>
           {!isCollapsed &&
           <div data-id="vhsmmnm2b" data-path="src/components/layout/Sidebar.tsx">
-              <h1 className="text-lg font-bold text-gray-900" data-id="00zu1xik0" data-path="src/components/layout/Sidebar.tsx">HRMS</h1>
-              <p className="text-xs text-gray-500" data-id="fix24iosm" data-path="src/components/layout/Sidebar.tsx">Portal</p>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100" data-id="00zu1xik0" data-path="src/components/layout/Sidebar.tsx">HRMS</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400" data-id="fix24iosm" data-path="src/components/layout/Sidebar.tsx">Portal</p>
             </div>
           }
         </div>
@@ -170,7 +170,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
 
       {/* User Info */}
       {!isCollapsed && user &&
-      <div className="p-4 border-b border-gray-200" data-id="7yw383wmm" data-path="src/components/layout/Sidebar.tsx">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800" data-id="7yw383wmm" data-path="src/components/layout/Sidebar.tsx">
           <div className="flex items-center space-x-3" data-id="nh4dbq063" data-path="src/components/layout/Sidebar.tsx">
             <div className="h-10 w-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center" data-id="kjxmlbrk2" data-path="src/components/layout/Sidebar.tsx">
               <span className="text-white font-medium text-sm" data-id="skxif0yac" data-path="src/components/layout/Sidebar.tsx">
@@ -178,10 +178,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
               </span>
             </div>
             <div className="flex-1 min-w-0" data-id="uxi6y0a92" data-path="src/components/layout/Sidebar.tsx">
-              <p className="text-sm font-medium text-gray-900 truncate" data-id="3cxcd7hhp" data-path="src/components/layout/Sidebar.tsx">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" data-id="3cxcd7hhp" data-path="src/components/layout/Sidebar.tsx">
                 {user.name}
               </p>
-              <p className="text-xs text-gray-500 truncate" data-id="6i0bmtzoc" data-path="src/components/layout/Sidebar.tsx">
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate" data-id="6i0bmtzoc" data-path="src/components/layout/Sidebar.tsx">
                 {user.designation}
               </p>
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1" data-id="f5482szou" data-path="src/components/layout/Sidebar.tsx">
@@ -205,7 +205,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                 `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 isActive ?
                 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' :
-                'text-gray-600 hover:bg-gray-50 hover:text-gray-900'} ${
+                'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'} ${
                 isCollapsed ? 'justify-center' : ''}`
                 } data-id="5ohyipyz1" data-path="src/components/layout/Sidebar.tsx">
 
@@ -223,7 +223,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
           {filteredAdminItems.length > 0 &&
           <>
               <Separator className="my-3" data-id="wihi5eimr" data-path="src/components/layout/Sidebar.tsx" />
-              <div className={`px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider ${
+              <div className={`px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
             isCollapsed ? 'text-center' : ''}`
             } data-id="u9zr3q5x0" data-path="src/components/layout/Sidebar.tsx">
                 {!isCollapsed ? 'Admin' : 'A'}
@@ -238,7 +238,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                   `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive ?
                   'bg-red-50 text-red-700 border-r-2 border-red-700' :
-                  'text-gray-600 hover:bg-gray-50 hover:text-gray-900'} ${
+                  'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'} ${
                   isCollapsed ? 'justify-center' : ''}`
                   } data-id="o5qqg63ks" data-path="src/components/layout/Sidebar.tsx">
 
@@ -258,7 +258,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
       </ScrollArea>
 
       {/* Logout Button */}
-      <div className="p-3 border-t border-gray-200" data-id="jiv1wmmqn" data-path="src/components/layout/Sidebar.tsx">
+      <div className="p-3 border-t border-gray-200 dark:border-gray-800" data-id="jiv1wmmqn" data-path="src/components/layout/Sidebar.tsx">
         <Button
           variant="ghost"
           className={`w-full ${isCollapsed ? 'px-2' : 'justify-start'} text-red-600 hover:text-red-700 hover:bg-red-50`}

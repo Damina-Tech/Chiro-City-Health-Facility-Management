@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +40,8 @@ const getInitials = (name: string) => {
 
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
   const { user, logout } = useAuth();
-  const [isDark, setIsDark] = React.useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   const notifications = [
     {
@@ -66,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
 
   return (
     <header
-      className="bg-white border-b border-gray-200 px-6 py-4"
+      className="bg-white border-b border-gray-200 px-6 py-4 dark:bg-gray-900 dark:border-gray-800"
       data-id="4rqgu5shv"
       data-path="src/components/layout/Header.tsx"
     >
@@ -126,7 +128,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsDark(!isDark)}
+            onClick={() => setTheme(isDark ? "light" : "dark")}
             className="p-2"
             data-id="80hkbdl3z"
             data-path="src/components/layout/Header.tsx"

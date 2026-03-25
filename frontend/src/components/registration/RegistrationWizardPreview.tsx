@@ -19,9 +19,9 @@ import { Info } from 'lucide-react';
 function PreviewRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (value === undefined || value === null || value === '') return null;
   return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4 py-2 border-b border-gray-100 text-sm last:border-0">
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4 py-2 border-b border-border text-sm last:border-0">
       <span className="text-muted-foreground sm:w-44 shrink-0">{label}</span>
-      <span className="font-medium text-gray-900 break-words">{value}</span>
+      <span className="font-medium text-foreground break-words">{value}</span>
     </div>
   );
 }
@@ -29,7 +29,7 @@ function PreviewRow({ label, value }: { label: string; value: React.ReactNode })
 function PreviewSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border bg-muted/25 p-4 space-y-1">
-      <h3 className="text-sm font-semibold text-gray-900 mb-1">{title}</h3>
+      <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
       {children}
     </div>
   );
