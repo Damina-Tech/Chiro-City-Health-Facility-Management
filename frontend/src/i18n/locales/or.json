@@ -1,0 +1,32 @@
+{
+  "common": {
+    "language": "Afaan",
+    "english": "Ingiliffa",
+    "amharic": "Amaaraa",
+    "oromo": "Oromoo"
+  },
+  "header": {
+    "searchPlaceholder": "Hojjettoota, kutaa hojii barbaadi..."
+  },
+  "nav": {
+    "dashboard": "Daashboordii",
+    "facilities": "Dhaabbilee",
+    "staff": "Hojjettoota",
+    "employees": "Hojjettoota (Employees)",
+    "organization": "Dhaabbata",
+    "leaveManagement": "Bulchiinsa Hayyamaa",
+    "attendance": "Argama",
+    "payroll": "Mindaa",
+    "timesheet": "Gabatee Sa'aatii",
+    "assets": "Qabeenya",
+    "expenses": "Baasiilee",
+    "documents": "Sanadoota",
+    "reports": "Gabaasota",
+    "onboarding": "Galmee (Onboarding)",
+    "notifications": "Beeksisa",
+    "userManagement": "Bulchiinsa Fayyadamaa",
+    "systemSettings": "Qindaa'ina Sirnaa",
+    "logout": "Ba'i",
+    "admin": "Bulchaa"
+  }
+}

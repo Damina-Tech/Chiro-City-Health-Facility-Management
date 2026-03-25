@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +23,10 @@ import {
   HelpCircle,
   Moon,
   Sun,
+  Languages,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { SupportedLanguage } from "@/i18n/i18n";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -42,6 +45,11 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
   const { user, logout } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { t, i18n } = useTranslation();
+
+  const setLanguage = (lng: SupportedLanguage) => {
+    void i18n.changeLanguage(lng);
+  };
 
   const notifications = [
     {
@@ -110,7 +118,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
               data-path="src/components/layout/Header.tsx"
             />
             <Input
-              placeholder="Search employees, departments..."
+              placeholder={t("header.searchPlaceholder")}
               className="pl-10 w-80"
               data-id="qh5v0ojwx"
               data-path="src/components/layout/Header.tsx"
@@ -124,6 +132,28 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
           data-id="n5jz4un9t"
           data-path="src/components/layout/Header.tsx"
         >
+          {/* Language */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="p-2" aria-label={t("common.language")}>
+                <Languages className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>{t("common.language")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setLanguage("en")}>
+                {t("common.english")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage("am")}>
+                {t("common.amharic")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage("or")}>
+                {t("common.oromo")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Theme Toggle */}
           <Button
             variant="ghost"

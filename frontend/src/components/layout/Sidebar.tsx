@@ -5,6 +5,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { useTranslation } from "react-i18next";
 import {
   Building2,
   Users,
@@ -30,92 +31,141 @@ interface SidebarProps {
   isCollapsed: boolean;
 }
 
-const menuItems = [
+type MenuKey =
+  | "dashboard"
+  | "facilities"
+  | "staff"
+  | "employees"
+  | "organization"
+  | "leaveManagement"
+  | "attendance"
+  | "payroll"
+  | "timesheet"
+  | "assets"
+  | "expenses"
+  | "documents"
+  | "reports"
+  | "onboarding"
+  | "notifications";
+
+type SidebarItem = {
+  key: MenuKey;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
+  permission: string;
+};
+
+type AdminKey = "userManagement" | "systemSettings";
+type AdminItem = {
+  key: AdminKey;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
+  permission: string;
+};
+
+const menuItems: SidebarItem[] = [
 {
+  key: "dashboard" as const,
   title: 'Dashboard',
   icon: BarChart3,
   href: '/dashboard',
   permission: PERMISSIONS.DASHBOARD_VIEW
 },
 {
+  key: "facilities" as const,
   title: 'Facilities',
   icon: Building2,
   href: '/facilities',
   permission: PERMISSIONS.FACILITIES_READ
 },
 {
+  key: "staff" as const,
   title: 'Staff',
   icon: Users,
   href: '/staff',
   permission: PERMISSIONS.STAFF_READ
 },
 {
+  key: "employees" as const,
   title: 'Employees',
   icon: Users,
   href: '/employees',
   permission: 'employees.read'
 },
 {
+  key: "organization" as const,
   title: 'Organization',
   icon: Building2,
   href: '/organization',
   permission: 'organization.view'
 },
 {
+  key: "leaveManagement" as const,
   title: 'Leave Management',
   icon: Calendar,
   href: '/leave',
   permission: 'leave.view'
 },
 {
+  key: "attendance" as const,
   title: 'Attendance',
   icon: Clock,
   href: '/attendance',
   permission: 'attendance.view'
 },
 {
+  key: "payroll" as const,
   title: 'Payroll',
   icon: DollarSign,
   href: '/payroll',
   permission: 'payroll.read'
 },
 {
+  key: "timesheet" as const,
   title: 'Timesheet',
   icon: Timer,
   href: '/timesheet',
   permission: 'timesheet.view'
 },
 {
+  key: "assets" as const,
   title: 'Assets',
   icon: Archive,
   href: '/assets',
   permission: 'assets.view'
 },
 {
+  key: "expenses" as const,
   title: 'Expenses',
   icon: CreditCard,
   href: '/expenses',
   permission: 'expenses.view'
 },
 {
+  key: "documents" as const,
   title: 'Documents',
   icon: FileText,
   href: '/documents',
   permission: 'documents.view'
 },
 {
+  key: "reports" as const,
   title: 'Reports',
   icon: BarChart3,
   href: '/reports',
   permission: 'reports.view'
 },
 {
+  key: "onboarding" as const,
   title: 'Onboarding',
   icon: UserPlus,
   href: '/onboarding',
   permission: 'onboarding.view'
 },
 {
+  key: "notifications" as const,
   title: 'Notifications',
   icon: Bell,
   href: '/notifications',
@@ -123,14 +173,16 @@ const menuItems = [
 }];
 
 
-const adminItems = [
+const adminItems: AdminItem[] = [
 {
+  key: "userManagement" as const,
   title: 'User Management',
   icon: Shield,
   href: '/admin/users',
   permission: PERMISSIONS.USERS_READ
 },
 {
+  key: "systemSettings" as const,
   title: 'System Settings',
   icon: Settings,
   href: '/admin/settings',
@@ -140,6 +192,7 @@ const adminItems = [
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
   const { user, logout, hasPermission } = useAuth();
+  const { t } = useTranslation();
 
   const filteredMenuItems = menuItems.filter((item) =>
   item.permission === '*' || hasPermission(item.permission)
@@ -212,7 +265,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                 <Icon className={`h-5 w-5 ${!isCollapsed ? 'mr-3' : ''}`} data-id="wisqmjoni" data-path="src/components/layout/Sidebar.tsx" />
                 {!isCollapsed &&
                 <>
-                    {item.title}
+                    {t(`nav.${item.key}`)}
                     <ChevronRight className="ml-auto h-4 w-4 opacity-50" data-id="31g9ykea2" data-path="src/components/layout/Sidebar.tsx" />
                   </>
                 }
@@ -226,7 +279,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
               <div className={`px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
             isCollapsed ? 'text-center' : ''}`
             } data-id="u9zr3q5x0" data-path="src/components/layout/Sidebar.tsx">
-                {!isCollapsed ? 'Admin' : 'A'}
+                {!isCollapsed ? t("nav.admin") : 'A'}
               </div>
               {filteredAdminItems.map((item) => {
               const Icon = item.icon;
@@ -245,7 +298,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
                     <Icon className={`h-5 w-5 ${!isCollapsed ? 'mr-3' : ''}`} data-id="0kjwqjby3" data-path="src/components/layout/Sidebar.tsx" />
                     {!isCollapsed &&
                   <>
-                        {item.title}
+                        {t(`nav.${item.key}`)}
                         <ChevronRight className="ml-auto h-4 w-4 opacity-50" data-id="06s2g2k8e" data-path="src/components/layout/Sidebar.tsx" />
                       </>
                   }
@@ -265,7 +318,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
           onClick={logout} data-id="eae2oox58" data-path="src/components/layout/Sidebar.tsx">
 
           <LogOut className={`h-5 w-5 ${!isCollapsed ? 'mr-3' : ''}`} data-id="ay49tknnc" data-path="src/components/layout/Sidebar.tsx" />
-          {!isCollapsed && 'Logout'}
+          {!isCollapsed && t("nav.logout")}
         </Button>
       </div>
     </div>);
