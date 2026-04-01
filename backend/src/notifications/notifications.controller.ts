@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -28,6 +28,16 @@ export class NotificationsController {
   @Put(':id/read')
   markRead(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.notificationsService.markRead(id, user);
+  }
+
+  @Delete('clear')
+  clear(@CurrentUser() user: JwtPayload) {
+    return this.notificationsService.clearAll(user);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.notificationsService.removeOne(id, user);
   }
 
   /** Admin broadcast: in-app and/or email, to all or by role. */

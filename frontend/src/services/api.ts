@@ -432,6 +432,16 @@ export const notificationsApi = {
       method: 'PUT',
       headers: headers(),
     }).then((res) => handleResponse<Notification>(res)),
+  clearAll: () =>
+    fetch(`${API_BASE}/notifications/clear`, {
+      method: 'DELETE',
+      headers: headers(),
+    }).then((res) => handleResponse<{ cleared: number }>(res)),
+  remove: (id: string) =>
+    fetch(`${API_BASE}/notifications/${id}`, {
+      method: 'DELETE',
+      headers: headers(),
+    }).then((res) => handleResponse<{ deleted: boolean }>(res)),
   broadcast: (body: {
     title: string;
     message: string;

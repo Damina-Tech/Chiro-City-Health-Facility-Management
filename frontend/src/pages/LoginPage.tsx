@@ -84,15 +84,15 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center p-4" data-id="0v4to7nyx" data-path="src/pages/LoginPage.tsx">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-cyan-950 flex items-center justify-center p-4" data-id="0v4to7nyx" data-path="src/pages/LoginPage.tsx">
       <div className="w-full max-w-md space-y-8" data-id="hjwo2jiph" data-path="src/pages/LoginPage.tsx">
         {/* Logo and Header */}
         <div className="text-center" data-id="oq8qgjhxk" data-path="src/pages/LoginPage.tsx">
           <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center mb-4" data-id="wkufmetdd" data-path="src/pages/LoginPage.tsx">
             <Building2 className="h-8 w-8 text-white" data-id="famyievx9" data-path="src/pages/LoginPage.tsx" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900" data-id="5gnil7qud" data-path="src/pages/LoginPage.tsx">HRMS Portal</h1>
-          <p className="text-gray-600 mt-2" data-id="51tyo77m1" data-path="src/pages/LoginPage.tsx">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100" data-id="5gnil7qud" data-path="src/pages/LoginPage.tsx">HRMS Portal</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-2" data-id="51tyo77m1" data-path="src/pages/LoginPage.tsx">Sign in to your account</p>
         </div>
 
         <Card className="shadow-lg" data-id="nn7m6b787" data-path="src/pages/LoginPage.tsx">
@@ -104,10 +104,10 @@ const LoginPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-6" data-id="1mt5nb4b9" data-path="src/pages/LoginPage.tsx">
             {/* Demo Credentials */}
-            <div className="bg-blue-50 p-3 rounded-lg text-sm" data-id="vd6ukug4y" data-path="src/pages/LoginPage.tsx">
-              <p className="font-medium text-blue-800 mb-1" data-id="fyvkn5g5t" data-path="src/pages/LoginPage.tsx">Demo (Chiro Health):</p>
-              <p className="text-blue-700" data-id="xx14ho2u4" data-path="src/pages/LoginPage.tsx">Email: admin@chirohealth.com</p>
-              <p className="text-blue-700" data-id="woeu2rnkp" data-path="src/pages/LoginPage.tsx">Password: password123</p>
+            <div className="bg-blue-50 dark:bg-blue-950/40 p-3 rounded-lg text-sm" data-id="vd6ukug4y" data-path="src/pages/LoginPage.tsx">
+              <p className="font-medium text-blue-800 dark:text-blue-300 mb-1" data-id="fyvkn5g5t" data-path="src/pages/LoginPage.tsx">Demo (Chiro Health):</p>
+              <p className="text-blue-700 dark:text-blue-300" data-id="xx14ho2u4" data-path="src/pages/LoginPage.tsx">Email: admin@chirohealth.com</p>
+              <p className="text-blue-700 dark:text-blue-300" data-id="woeu2rnkp" data-path="src/pages/LoginPage.tsx">Password: password123</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4" data-id="1x51ohzy6" data-path="src/pages/LoginPage.tsx">
@@ -156,7 +156,7 @@ const LoginPage: React.FC = () => {
                 <Separator data-id="3lxc7w1s9" data-path="src/pages/LoginPage.tsx" />
               </div>
               <div className="relative flex justify-center text-xs uppercase" data-id="uh8p4nfjs" data-path="src/pages/LoginPage.tsx">
-                <span className="bg-white px-2 text-gray-500" data-id="taiifdb6t" data-path="src/pages/LoginPage.tsx">Or continue with</span>
+                <span className="bg-white dark:bg-card px-2 text-gray-500 dark:text-gray-400" data-id="taiifdb6t" data-path="src/pages/LoginPage.tsx">Or continue with</span>
               </div>
             </div>
 
@@ -182,14 +182,14 @@ const LoginPage: React.FC = () => {
               </Button>
             </div>
 
-            <div className="text-center text-sm text-gray-600" data-id="qq3kgxghm" data-path="src/pages/LoginPage.tsx">
+            <div className="text-center text-sm text-gray-600 dark:text-gray-300" data-id="qq3kgxghm" data-path="src/pages/LoginPage.tsx">
               <p data-id="0s4kaouu2" data-path="src/pages/LoginPage.tsx">Don't have an account? Contact your administrator</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Additional Info */}
-        <div className="text-center text-xs text-gray-500" data-id="7bfqzi4e3" data-path="src/pages/LoginPage.tsx">
+        <div className="text-center text-xs text-gray-500 dark:text-gray-400" data-id="7bfqzi4e3" data-path="src/pages/LoginPage.tsx">
           <p data-id="rsplyivqd" data-path="src/pages/LoginPage.tsx">© 2024 HRMS Portal. All rights reserved.</p>
           <p data-id="5nmpf7z9b" data-path="src/pages/LoginPage.tsx">Powered by React.js & FastAPI</p>
         </div>

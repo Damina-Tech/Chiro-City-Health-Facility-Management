@@ -52,6 +52,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
   const navigate = useNavigate();
   const storeNotifications = useStore((s) => s.notifications);
   const markAllAsRead = useStore((s) => s.markAllAsRead);
+  const markInAppRead = useStore((s) => s.markAsRead);
 
   const setLanguage = (lng: SupportedLanguage) => {
     void i18n.changeLanguage(lng);
@@ -61,18 +62,34 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
   const roleNorm = (role ?? "").toUpperCase();
   // Backend (system) notifications
   const [apiNotifications, setApiNotifications] = React.useState<ApiNotification[]>([]);
-  React.useEffect(() => {
-    let mounted = true;
+  const fetchApiNotifications = React.useCallback(() => {
     notificationsApi
       .list({ limit: 10 })
       .then((data) => {
-        if (mounted) setApiNotifications(data);
+        setApiNotifications(data);
       })
       .catch(() => {
-        if (mounted) setApiNotifications([]);
+        setApiNotifications([]);
       });
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const safeFetch = () => {
+      notificationsApi
+        .list({ limit: 10 })
+        .then((data) => {
+          if (mounted) setApiNotifications(data);
+        })
+        .catch(() => {
+          if (mounted) setApiNotifications([]);
+        });
+    };
+    safeFetch();
+    const id = window.setInterval(safeFetch, 5000);
     return () => {
       mounted = false;
+      window.clearInterval(id);
     };
   }, []);
 
@@ -92,6 +109,28 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
     apiNotifications.filter((n) => !n.readAt).length;
   const recentInApp = visibleNotifications.slice(0, 4);
   const recentApi = apiNotifications.slice(0, 4);
+
+  const handleApiNotificationClick = (n: ApiNotification) => {
+    if (!n.readAt) {
+      // Optimistic update for instant bell count decrease.
+      setApiNotifications((prev) =>
+        prev.map((item) =>
+          item.id === n.id ? { ...item, readAt: new Date().toISOString() } : item
+        )
+      );
+      void notificationsApi.markRead(n.id).catch(() => {
+        // Ignore here; list polling will reconcile server state.
+      });
+    }
+    navigate("/notifications");
+  };
+
+  const handleInAppNotificationClick = (id: string, isRead: boolean) => {
+    if (!isRead) {
+      markInAppRead(id);
+    }
+    navigate("/notifications");
+  };
 
   return (
     <header
@@ -199,6 +238,9 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
 
           {/* Notifications */}
           <DropdownMenu
+            onOpenChange={(open) => {
+              if (open) fetchApiNotifications();
+            }}
             data-id="thot3m9r0"
             data-path="src/components/layout/Header.tsx"
           >
@@ -268,6 +310,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                     <DropdownMenuItem
                       key={`api-${n.id}`}
                       className="flex flex-col items-start p-4"
+                      onClick={() => handleApiNotificationClick(n)}
                     >
                       <div className="flex items-center justify-between w-full">
                         <p
@@ -284,6 +327,12 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                     <DropdownMenuItem
                       key={`app-${notification.id}`}
                       className="flex flex-col items-start p-4"
+                      onClick={() =>
+                        handleInAppNotificationClick(
+                          notification.id,
+                          notification.isRead
+                        )
+                      }
                     >
                       <div className="flex items-center justify-between w-full">
                         <p

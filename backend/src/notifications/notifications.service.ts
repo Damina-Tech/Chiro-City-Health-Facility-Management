@@ -169,6 +169,34 @@ export class NotificationsService {
     };
   }
 
+  async clearAll(user: JwtPayload) {
+    const result = await this.prisma.notificationRecipient.deleteMany({
+      where: { userId: user.sub },
+    });
+    return { cleared: result.count };
+  }
+
+  async removeOne(id: string, user: JwtPayload) {
+    const rec = await this.prisma.notificationRecipient.findUnique({
+      where: {
+        notificationId_userId: { notificationId: id, userId: user.sub },
+      },
+      select: { notificationId: true },
+    });
+
+    if (!rec) {
+      throw new ForbiddenException('Forbidden resource');
+    }
+
+    await this.prisma.notificationRecipient.delete({
+      where: {
+        notificationId_userId: { notificationId: id, userId: user.sub },
+      },
+    });
+
+    return { deleted: true };
+  }
+
   async broadcast(dto: BroadcastNotificationDto, sender: JwtPayload) {
     const type = dto.type || 'ANNOUNCEMENT';
 

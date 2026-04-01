@@ -65,11 +65,7 @@ export default function NotificationsPage() {
 
   // Auth / permissions
   const { user, hasPermission } = useAuth();
-  const role = user?.role;
-  const canManageNotifications =
-    (user?.role ?? "").toUpperCase() === "ADMIN" ||
-    hasPermission("admin") ||
-    hasPermission("*");
+  const canManageNotifications = (user?.role ?? "").toUpperCase() === "ADMIN";
 
   const refresh = React.useCallback(() => {
     notificationsApi
@@ -273,7 +269,14 @@ export default function NotificationsPage() {
 
   const handleClearAll = () => {
     if (!canManageNotifications) return;
-    // No backend delete/clear endpoint yet; keep UI hidden for now.
+    void notificationsApi
+      .clearAll()
+      .then(() => {
+        setApiNotifications([]);
+      })
+      .catch(() => {
+        // ignore; backend enforces auth
+      });
   };
 
   const handleMarkAsRead = (id: string) => {
@@ -310,50 +313,6 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
-
-      {/* System notifications (license expiry, staff assignment, facility activation) */}
-      {apiNotifications.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              System Notifications
-            </CardTitle>
-            <CardDescription>
-              License expiries, staff assignments, facility activations
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {apiNotifications.slice(0, 10).map((n) => (
-                <div
-                  key={n.id}
-                  className={`flex items-start justify-between gap-4 p-3 rounded-lg border ${
-                    n.readAt ? "bg-muted/30" : "bg-background"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{n.title}</p>
-                    <p className="text-sm text-muted-foreground">{n.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(n.createdAt), "MMM d, yyyy HH:mm")} · {n.type}
-                    </p>
-                  </div>
-                  {!n.readAt && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => markApiRead(n.id)}
-                    >
-                      Mark read
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -479,9 +438,14 @@ export default function NotificationsPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {notification.message}
-                        </p>
+                        <details className="mb-2">
+                          <summary className="cursor-pointer text-xs text-blue-600">
+                            Show message
+                          </summary>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {notification.message}
+                          </p>
+                        </details>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>
                             {format(
@@ -502,9 +466,17 @@ export default function NotificationsPage() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // No backend delete endpoint yet
+                        void notificationsApi
+                          .remove(notification.id)
+                          .then(() => {
+                            setApiNotifications((prev) =>
+                              prev.filter((n) => n.id !== notification.id),
+                            );
+                          })
+                          .catch(() => {
+                            // ignore; backend enforces ownership
+                          });
                       }}
-                      disabled
                     >
                       ×
                     </Button>
