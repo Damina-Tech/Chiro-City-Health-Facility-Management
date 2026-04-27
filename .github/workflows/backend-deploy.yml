@@ -1,0 +1,52 @@
+# Optional: set secret FTP_REMOTE_DIR_BACKEND (e.g. backend/) to override upload folder.
+name: Deploy NestJS Backend to cPanel via FTP
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  backend-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Deploy backend to cPanel via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_BACKEND_USERNAME }}
+          password: ${{ secrets.FTP_BACKEND_PASSWORD }}
+          local-dir: ./backend/
+          server-dir: ${{ secrets.FTP_REMOTE_DIR_BACKEND || '/' }}
+          protocol: ftps
+          security: loose
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/node_modules/**
+            **/src/**
+            **/.env
+            **/.env.*
+            **/uploads/**
