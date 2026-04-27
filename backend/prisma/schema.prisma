@@ -40,26 +40,53 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  notificationRecipients NotificationRecipient[]
+
   @@map("users")
 }
 
 // ============ Facilities ============
-// Status: DRAFT | SUBMITTED | APPROVED | ACTIVE | INACTIVE | SUSPENDED | TERMINATED
+// Status: PENDING | APPROVED | ACTIVE | SUSPENDED (and legacy DRAFT | SUBMITTED | etc.)
 model Facility {
-  id              String   @id @default(uuid())
-  name            String
-  type            String   // HOSPITAL | CLINIC | HEALTH_CENTER | PHARMACY
-  registrationNo  String?
-  licenseNo       String?
-  licenseExpiry   DateTime?
-  address         String?
-  phone           String?
-  email           String?
-  status          String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, ACTIVE, INACTIVE, SUSPENDED, TERMINATED
-  services        String?  // JSON array of service names
-  legalInfo       String?  // JSON for legal details
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  name                  String
+  type                  String   // HOSPITAL | CLINIC | HEALTH_CENTER | PHARMACY | LAB
+  ownershipType         String?  // PUBLIC | PRIVATE | NGO | CHARITY
+  registrationNo        String?
+  tin                   String?  // Tax Identification Number
+  description           String?
+  // Location
+  region                String?
+  city                  String?
+  woreda                String?
+  kebele                String?
+  streetAddress         String?
+  gpsLat                Float?
+  gpsLng                Float?
+  // Contact
+  phone                 String?
+  altPhone              String?
+  email                 String?
+  website               String?
+  // Legal & compliance
+  licenseNo             String?  // Health Operation License Number
+  licenseIssueDate      DateTime?
+  licenseExpiry         DateTime?
+  regulatoryAuthority   String?
+  accreditationLevel    String?
+  // Operational
+  operatingHours        String?  // e.g. "08:00-18:00" or JSON
+  status                String   @default("DRAFT") // PENDING | APPROVED | ACTIVE | SUSPENDED | DRAFT | SUBMITTED | INACTIVE | TERMINATED
+  approvalStatus        String?  // optional separate approval tracking
+  // Legacy / extras
+  address               String?  // kept for backward compatibility
+  services              String?  // JSON array of service names
+  legalInfo             String?  // JSON for legal details
+  // Facility-type-specific (Hospital, Clinic, Health Center, Pharmacy) stored as JSON
+  specificFields        String?  // JSON: HospitalSpecific | ClinicSpecific | HealthCenterSpecific | PharmacySpecific
+  createdBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   staff           StaffAssignment[]
   staffMembers    Staff[]           // Staff with facilityId = this facility
@@ -85,24 +112,34 @@ model FacilityDocument {
 }
 
 // ============ Staff ============
-// Status: DRAFT | SUBMITTED | APPROVED | ACTIVE | INACTIVE | SUSPENDED | TERMINATED
+// Status: DRAFT | ACTIVE | SUSPENDED | TERMINATED | etc.
 model Staff {
   id            String   @id @default(uuid())
-  employeeId    String   @unique
-  name          String
+  employeeId    String   @unique // Staff ID
+  name          String   // Full display name (derived from first + last when registering)
+  firstName     String?
+  lastName      String?
+  gender        String?  // MALE | FEMALE | OTHER
+  dateOfBirth   DateTime?
+  nationalId    String?
   email         String
   phone         String?
+  address       String?
   department    String?
-  designation   String
+  designation   String   // Job title / role label
+  staffRole     String?  // DOCTOR | NURSE | PHARMACIST | LAB_TECH | ADMIN
+  employmentType String? // PERMANENT | CONTRACT | TEMPORARY
   facilityId    String?
   facility      Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
   departmentName String?
   licenseNo     String?
+  licenseIssueDate DateTime?
   licenseExpiry DateTime?
   status        String   @default("DRAFT")
   joiningDate   DateTime?
-  address       String?
   emergencyContact String?
+  specificFields String? // JSON: doctor | nurse | pharmacist | labTechnician | administrative
+  createdBy     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -155,7 +192,23 @@ model Notification {
   metadata  String?  // JSON
   createdAt DateTime @default(now())
 
+  recipients NotificationRecipient[]
+
   @@map("notifications")
+}
+
+model NotificationRecipient {
+  id             String       @id @default(uuid())
+  notificationId String
+  userId         String
+  deliveredAt    DateTime     @default(now())
+  readAt         DateTime?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+  @@map("notification_recipients")
 }
 
 // ============ Audit ============

@@ -1,9 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ROLES } from '../common/constants';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+
+/** Officer may only use these staff statuses; Admin approves (e.g. APPROVED / ACTIVE). */
+const OFFICER_ALLOWED_STAFF_STATUSES = new Set<string>(['DRAFT', 'SUBMITTED']);
 
 @Injectable()
 export class StaffService {
@@ -13,24 +23,66 @@ export class StaffService {
     private notifications: NotificationsService,
   ) {}
 
-  async create(dto: CreateStaffDto, userId?: string) {
+  private serializeSpecificFields(fields: CreateStaffDto['specificFields']): string | null {
+    if (!fields || !Object.keys(fields).length) return null;
+    return JSON.stringify(fields);
+  }
+
+  private mapCreateData(dto: CreateStaffDto, userId?: string) {
+    const name =
+      dto.name?.trim() ||
+      `${dto.firstName} ${dto.lastName}`.trim() ||
+      dto.employeeId;
+    return {
+      employeeId: dto.employeeId.trim(),
+      name,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      gender: dto.gender ?? undefined,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+      nationalId: dto.nationalId ?? undefined,
+      email: dto.email,
+      phone: dto.phone ?? undefined,
+      address: dto.address ?? undefined,
+      department: dto.department ?? undefined,
+      designation: dto.designation,
+      staffRole: dto.staffRole ?? undefined,
+      employmentType: dto.employmentType ?? undefined,
+      facilityId: dto.facilityId ?? undefined,
+      departmentName: dto.departmentName ?? undefined,
+      licenseNo: dto.licenseNo ?? undefined,
+      licenseIssueDate: dto.licenseIssueDate ? new Date(dto.licenseIssueDate) : undefined,
+      licenseExpiry: dto.licenseExpiry ? new Date(dto.licenseExpiry) : undefined,
+      status: dto.status || 'DRAFT',
+      joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : undefined,
+      emergencyContact: dto.emergencyContact ?? undefined,
+      specificFields: this.serializeSpecificFields(dto.specificFields),
+      createdBy: dto.createdBy ?? userId ?? undefined,
+    };
+  }
+
+  async create(dto: CreateStaffDto, userId?: string, userRole?: string) {
+    const effectiveDto =
+      userRole === ROLES.OFFICER
+        ? { ...dto, status: 'SUBMITTED' as const }
+        : dto;
+    const employeeId = effectiveDto.employeeId.trim();
+    if (!employeeId) {
+      throw new BadRequestException('Employee ID cannot be empty');
+    }
+    const normalizedDto = { ...effectiveDto, employeeId };
+
+    const existingByEmployeeId = await this.prisma.staff.findUnique({
+      where: { employeeId },
+    });
+    if (existingByEmployeeId) {
+      throw new ConflictException(
+        `Staff ID "${employeeId}" is already in use. Use a different employee ID.`,
+      );
+    }
+
     const staff = await this.prisma.staff.create({
-      data: {
-        employeeId: dto.employeeId,
-        name: dto.name,
-        email: dto.email,
-        phone: dto.phone,
-        department: dto.department,
-        designation: dto.designation,
-        facilityId: dto.facilityId,
-        departmentName: dto.departmentName,
-        licenseNo: dto.licenseNo,
-        licenseExpiry: dto.licenseExpiry ? new Date(dto.licenseExpiry) : null,
-        status: dto.status || 'DRAFT',
-        joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : null,
-        address: dto.address,
-        emergencyContact: dto.emergencyContact,
-      },
+      data: this.mapCreateData(normalizedDto, userId),
     });
     await this.audit.log({
       action: 'CREATE',
@@ -40,16 +92,19 @@ export class StaffService {
       userId,
       payload: { name: staff.name, employeeId: staff.employeeId },
     });
-    if (dto.facilityId) {
+    if (effectiveDto.facilityId) {
       await this.prisma.staffAssignment.create({
         data: {
           staffId: staff.id,
-          facilityId: dto.facilityId,
-          department: dto.departmentName ?? dto.department,
+          facilityId: effectiveDto.facilityId,
+          department: effectiveDto.departmentName ?? effectiveDto.department,
           assignedBy: userId,
         },
       });
-      await this.notifications.notifyStaffAssignment(staff.name, dto.facilityId, staff.name);
+      await this.notifications.notifyStaffAssignment(staff.name, effectiveDto.facilityId, staff.name);
+    }
+    if (userRole === ROLES.OFFICER) {
+      await this.notifications.notifyPendingStaffApproval(staff.id, staff.name, staff.employeeId);
     }
     return staff;
   }
@@ -59,8 +114,11 @@ export class StaffService {
     if (params?.search) {
       where.OR = [
         { name: { contains: params.search, mode: 'insensitive' } },
+        { firstName: { contains: params.search, mode: 'insensitive' } },
+        { lastName: { contains: params.search, mode: 'insensitive' } },
         { email: { contains: params.search, mode: 'insensitive' } },
         { employeeId: { contains: params.search, mode: 'insensitive' } },
+        { nationalId: { contains: params.search, mode: 'insensitive' } },
       ];
     }
     if (params?.status) where.status = params.status;
@@ -86,35 +144,74 @@ export class StaffService {
       },
     });
     if (!staff) throw new NotFoundException('Staff not found');
-    return staff;
+    return {
+      ...staff,
+      specificFields: staff.specificFields ? JSON.parse(staff.specificFields) : null,
+    };
   }
 
-  async update(id: string, dto: UpdateStaffDto, userId?: string) {
+  async update(id: string, dto: UpdateStaffDto, userId?: string, userRole?: string) {
     const existing = await this.prisma.staff.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Staff not found');
 
+    if (dto.status !== undefined && userRole === ROLES.OFFICER && !OFFICER_ALLOWED_STAFF_STATUSES.has(dto.status)) {
+      throw new ForbiddenException(
+        'Officer can only set staff status to DRAFT or SUBMITTED. Only Admin can approve or activate.',
+      );
+    }
+
+    const data: any = {};
+    if (dto.employeeId !== undefined) {
+      const newEmployeeId = dto.employeeId.trim();
+      if (!newEmployeeId) {
+        throw new BadRequestException('Employee ID cannot be empty');
+      }
+      if (newEmployeeId !== existing.employeeId) {
+        const taken = await this.prisma.staff.findUnique({
+          where: { employeeId: newEmployeeId },
+        });
+        if (taken) {
+          throw new ConflictException(
+            `Staff ID "${newEmployeeId}" is already in use. Use a different employee ID.`,
+          );
+        }
+      }
+      data.employeeId = newEmployeeId;
+    }
+    if (dto.firstName !== undefined) data.firstName = dto.firstName;
+    if (dto.lastName !== undefined) data.lastName = dto.lastName;
+    if (dto.firstName !== undefined || dto.lastName !== undefined || dto.name !== undefined) {
+      const fn = dto.firstName !== undefined ? dto.firstName : existing.firstName;
+      const ln = dto.lastName !== undefined ? dto.lastName : existing.lastName;
+      const combined = [fn, ln].filter(Boolean).join(' ').trim();
+      if (combined) data.name = combined;
+      else if (dto.name !== undefined) data.name = dto.name;
+    } else if (dto.name !== undefined) {
+      data.name = dto.name;
+    }
+    if (dto.gender !== undefined) data.gender = dto.gender;
+    if (dto.dateOfBirth !== undefined) data.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : null;
+    if (dto.nationalId !== undefined) data.nationalId = dto.nationalId;
+    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.address !== undefined) data.address = dto.address;
+    if (dto.department !== undefined) data.department = dto.department;
+    if (dto.designation !== undefined) data.designation = dto.designation;
+    if (dto.staffRole !== undefined) data.staffRole = dto.staffRole;
+    if (dto.employmentType !== undefined) data.employmentType = dto.employmentType;
+    if (dto.facilityId !== undefined) data.facilityId = dto.facilityId;
+    if (dto.departmentName !== undefined) data.departmentName = dto.departmentName;
+    if (dto.licenseNo !== undefined) data.licenseNo = dto.licenseNo;
+    if (dto.licenseIssueDate !== undefined) data.licenseIssueDate = dto.licenseIssueDate ? new Date(dto.licenseIssueDate) : null;
+    if (dto.licenseExpiry !== undefined) data.licenseExpiry = dto.licenseExpiry ? new Date(dto.licenseExpiry) : null;
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.joiningDate !== undefined) data.joiningDate = dto.joiningDate ? new Date(dto.joiningDate) : null;
+    if (dto.emergencyContact !== undefined) data.emergencyContact = dto.emergencyContact;
+    if (dto.specificFields !== undefined) data.specificFields = this.serializeSpecificFields(dto.specificFields);
+
     const staff = await this.prisma.staff.update({
       where: { id },
-      data: {
-        ...(dto.employeeId && { employeeId: dto.employeeId }),
-        ...(dto.name && { name: dto.name }),
-        ...(dto.email && { email: dto.email }),
-        ...(dto.phone !== undefined && { phone: dto.phone }),
-        ...(dto.department !== undefined && { department: dto.department }),
-        ...(dto.designation && { designation: dto.designation }),
-        ...(dto.facilityId !== undefined && { facilityId: dto.facilityId }),
-        ...(dto.departmentName !== undefined && { departmentName: dto.departmentName }),
-        ...(dto.licenseNo !== undefined && { licenseNo: dto.licenseNo }),
-        ...(dto.licenseExpiry !== undefined && {
-          licenseExpiry: dto.licenseExpiry ? new Date(dto.licenseExpiry) : null,
-        }),
-        ...(dto.status && { status: dto.status }),
-        ...(dto.joiningDate !== undefined && {
-          joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : null,
-        }),
-        ...(dto.address !== undefined && { address: dto.address }),
-        ...(dto.emergencyContact !== undefined && { emergencyContact: dto.emergencyContact }),
-      },
+      data,
     });
 
     if (dto.facilityId && dto.facilityId !== existing.facilityId) {
@@ -155,14 +252,12 @@ export class StaffService {
       action: 'DELETE',
       entity: 'Staff',
       entityId: id,
-      staffId: id,
       userId,
       payload: { name: staff.name },
     });
     return { deleted: true };
   }
 
-  /** Staff with license expiring within days */
   async findLicenseExpiringWithin(days: number) {
     const from = new Date();
     const to = new Date();

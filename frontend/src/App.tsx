@@ -1,16 +1,21 @@
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Layout from "./components/layout/Layout";
+import { PERMISSIONS } from "./constants/permissions";
+import { firstAccessiblePath } from "./lib/postLoginPath";
 
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import FacilitiesPage from "./pages/FacilitiesPage";
 import FacilityProfilePage from "./pages/FacilityProfilePage";
+import FacilityRegistrationPage from "./pages/FacilityRegistrationPage";
 import StaffPage from "./pages/StaffPage";
 import StaffProfilePage from "./pages/StaffProfilePage";
+import StaffRegistrationPage from "./pages/StaffRegistrationPage";
 import EmployeesPage from "./pages/EmployeesPage";
 import AttendancePage from "./pages/AttendancePage";
 import LeaveManagement from "./pages/LeaveManagement";
@@ -56,9 +61,33 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Public Route Component (redirects to dashboard if authenticated)
+function PermissionRoute({
+  permission,
+  children,
+}: {
+  permission: string;
+  children: React.ReactNode;
+}) {
+  const { isLoading, hasPermission } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (!hasPermission(permission)) {
+    return <Navigate to={firstAccessiblePath(hasPermission)} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Public Route Component (redirects to first allowed page if authenticated)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, hasPermission } = useAuth();
 
   if (isLoading) {
     return (
@@ -80,7 +109,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     <>{children}</>
   ) : (
     <Navigate
-      to="/dashboard"
+      to={firstAccessiblePath(hasPermission)}
       replace
       data-id="k95po2qvw"
       data-path="src/App.tsx"
@@ -127,7 +156,11 @@ function AppRoutes() {
       >
         <Route
           path="dashboard"
-          element={<Dashboard data-id="2qf7vwrd4" data-path="src/App.tsx" />}
+          element={
+            <PermissionRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
+              <Dashboard data-id="2qf7vwrd4" data-path="src/App.tsx" />
+            </PermissionRoute>
+          }
           data-id="uyypx0ak2"
           data-path="src/App.tsx"
         />
@@ -136,12 +169,28 @@ function AppRoutes() {
           element={<FacilitiesPage />}
         />
         <Route
+          path="facilities/register"
+          element={<FacilityRegistrationPage />}
+        />
+        <Route
+          path="facilities/:id/edit"
+          element={<FacilityRegistrationPage />}
+        />
+        <Route
           path="facilities/:id"
           element={<FacilityProfilePage />}
         />
         <Route
           path="staff"
           element={<StaffPage />}
+        />
+        <Route
+          path="staff/register"
+          element={<StaffRegistrationPage />}
+        />
+        <Route
+          path="staff/:id/edit"
+          element={<StaffRegistrationPage />}
         />
         <Route
           path="staff/:id"
@@ -268,20 +317,29 @@ function AppRoutes() {
 }
 
 const App = () => (
-  <QueryClientProvider
-    client={queryClient}
-    data-id="t05dmonz4"
+  <ThemeProvider
+    attribute="class"
+    defaultTheme="system"
+    enableSystem
+    disableTransitionOnChange
+    data-id="t7g0u6w7f"
     data-path="src/App.tsx"
   >
-    <TooltipProvider data-id="mobcb0b0n" data-path="src/App.tsx">
-      <AuthProvider data-id="l2tksbrmp" data-path="src/App.tsx">
-        <BrowserRouter data-id="lopawu7zf" data-path="src/App.tsx">
-          <AppRoutes data-id="uqfa9bkfo" data-path="src/App.tsx" />
-        </BrowserRouter>
-      </AuthProvider>
-      <Toaster data-id="u7pxvax50" data-path="src/App.tsx" />
-    </TooltipProvider>
-  </QueryClientProvider>
+    <QueryClientProvider
+      client={queryClient}
+      data-id="t05dmonz4"
+      data-path="src/App.tsx"
+    >
+      <TooltipProvider data-id="mobcb0b0n" data-path="src/App.tsx">
+        <AuthProvider data-id="l2tksbrmp" data-path="src/App.tsx">
+          <BrowserRouter data-id="lopawu7zf" data-path="src/App.tsx">
+            <AppRoutes data-id="uqfa9bkfo" data-path="src/App.tsx" />
+          </BrowserRouter>
+        </AuthProvider>
+        <Toaster data-id="u7pxvax50" data-path="src/App.tsx" />
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

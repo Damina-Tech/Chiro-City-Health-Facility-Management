@@ -11,12 +11,39 @@ export const ENTITY_STATUS = {
   TERMINATED: 'TERMINATED',
 } as const;
 
-export const FACILITY_TYPES = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY'] as const;
+export const FACILITY_TYPES = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY', 'LAB'] as const;
+
+export const OWNERSHIP_TYPES = ['PUBLIC', 'PRIVATE', 'NGO', 'CHARITY'] as const;
+
+/** Facility status for registration workflow */
+export const FACILITY_STATUS_OPTIONS = [
+  'PENDING',
+  'APPROVED',
+  'ACTIVE',
+  'SUSPENDED',
+  'DRAFT',
+  'SUBMITTED',
+  'INACTIVE',
+  'TERMINATED',
+] as const;
 
 export const ROLES = {
   ADMIN: 'Admin',
   OFFICER: 'Officer',
 } as const;
+
+/** Staff primary role — drives role-specific registration fields */
+export const STAFF_ROLES = [
+  'DOCTOR',
+  'NURSE',
+  'PHARMACIST',
+  'LAB_TECH',
+  'ADMIN',
+] as const;
+
+export const EMPLOYMENT_TYPES = ['PERMANENT', 'CONTRACT', 'TEMPORARY'] as const;
+
+export const GENDERS = ['MALE', 'FEMALE', 'OTHER'] as const;
 
 /**
  * RBAC: Permission names used for guards and seed.
@@ -45,6 +72,14 @@ export const PERMISSIONS = {
 
   NOTIFICATIONS_READ: 'notifications.read',
   NOTIFICATIONS_MARK_READ: 'notifications.markRead',
+
+  USERS_READ: 'users.read',
+  USERS_CREATE: 'users.create',
+  USERS_UPDATE: 'users.update',
+  USERS_DELETE: 'users.delete',
+
+  ROLES_READ: 'roles.read',
+  ROLES_UPDATE: 'roles.update',
 } as const;
 
 /** All permission values for seed (Admin gets these). */

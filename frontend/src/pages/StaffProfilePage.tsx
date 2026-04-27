@@ -12,8 +12,14 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 import { PERMISSIONS } from '@/constants/permissions';
-import { staffApi, documentsApi, type Staff, type StaffDocument } from '@/services/api';
+import { staffApi, documentsApi, type Staff, type StaffDocument, type StaffSpecificFields } from '@/services/api';
+import { StaffStatusUpdateDialog } from '@/components/staff/StaffStatusUpdateDialog';
+import {
+  StaffRoleSpecificFieldsDisplay,
+  STAFF_ROLE_LABELS,
+} from '@/components/staff/StaffRoleSpecificFieldsDisplay';
 import {
   ArrowLeft,
   MapPin,
@@ -24,13 +30,14 @@ import {
   Building2,
   Calendar,
   User,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function StaffProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  const [staff, setStaff] = useState<Staff | null>(null);
+  const [staff, setStaff] = useState<(Staff & { specificFields?: StaffSpecificFields | null }) | null>(null);
   const [documents, setDocuments] = useState<StaffDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -38,8 +45,10 @@ export default function StaffProfilePage() {
   const [uploadName, setUploadName] = useState('');
   const [uploadType, setUploadType] = useState('other');
   const [uploading, setUploading] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 
   const canReadStaff = hasPermission(PERMISSIONS.STAFF_READ);
+  const canUpdateStaff = hasPermission(PERMISSIONS.STAFF_UPDATE);
   const canUpload = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_UPLOAD);
   const canListDocs = hasPermission(PERMISSIONS.DOCUMENTS_STAFF_READ);
 
@@ -58,6 +67,11 @@ export default function StaffProfilePage() {
       .finally(() => setLoading(false));
   }, [id, canReadStaff, canListDocs]);
 
+  const refetchStaff = () => {
+    if (!id) return;
+    staffApi.get(id).then(setStaff).catch(() => setStaff(null));
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !uploadFile) return;
@@ -70,7 +84,17 @@ export default function StaffProfilePage() {
       setUploadFile(null);
       setUploadName('');
       setUploadType('other');
-    } catch {}
+      toast({
+        title: 'Document uploaded',
+        description: 'The file has been added to this staff record.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Could not upload file.',
+        variant: 'destructive',
+      });
+    }
     setUploading(false);
   };
 
@@ -106,23 +130,52 @@ export default function StaffProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Button variant="ghost" size="icon" onClick={() => navigate('/staff')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold text-gray-900">{staff.name}</h1>
-          <p className="text-gray-600 flex items-center gap-2 mt-1">
+          <p className="text-gray-600 flex flex-wrap items-center gap-2 mt-1">
             <Badge className={getStatusColor(staff.status)}>{staff.status}</Badge>
             <Badge variant="outline">{staff.employeeId}</Badge>
+            {staff.staffRole && <Badge variant="outline">{staff.staffRole}</Badge>}
             {staff.facility && (
               <Badge variant="secondary" className="cursor-pointer" onClick={() => navigate(`/facilities/${staff.facility!.id}`)}>
                 {staff.facility.name}
               </Badge>
             )}
+            {canUpdateStaff && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setStatusDialogOpen(true)}
+                title="Update status"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                Change status
+              </Button>
+            )}
           </p>
         </div>
+        {canUpdateStaff && (
+          <Button variant="outline" onClick={() => navigate(`/staff/${staff.id}/edit`)}>
+            Edit registration
+          </Button>
+        )}
       </div>
+
+      {canUpdateStaff && (
+        <StaffStatusUpdateDialog
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          staffId={staff.id}
+          staffName={staff.name}
+          currentStatus={staff.status}
+          onSuccess={refetchStaff}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -134,8 +187,23 @@ export default function StaffProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {(staff.firstName || staff.lastName) && (
+                <p><span className="font-medium text-gray-600">Legal name:</span>{' '}
+                  {[staff.firstName, staff.lastName].filter(Boolean).join(' ') || staff.name}
+                </p>
+              )}
+              {staff.gender && <p><span className="font-medium text-gray-600">Gender:</span> {staff.gender}</p>}
+              {staff.dateOfBirth && (
+                <p><span className="font-medium text-gray-600">Date of birth:</span>{' '}
+                  {new Date(staff.dateOfBirth).toLocaleDateString()}
+                </p>
+              )}
+              {staff.nationalId && <p><span className="font-medium text-gray-600">National ID:</span> {staff.nationalId}</p>}
               <p><span className="font-medium text-gray-600">Designation:</span> {staff.designation}</p>
               <p><span className="font-medium text-gray-600">Department:</span> {staff.departmentName || staff.department || '—'}</p>
+              {staff.employmentType && (
+                <p><span className="font-medium text-gray-600">Employment type:</span> {staff.employmentType}</p>
+              )}
               {staff.joiningDate && (
                 <p className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-500" />
@@ -144,6 +212,11 @@ export default function StaffProfilePage() {
               )}
               {staff.licenseNo && (
                 <p><span className="font-medium text-gray-600">License:</span> {staff.licenseNo}</p>
+              )}
+              {staff.licenseIssueDate && (
+                <p><span className="font-medium text-gray-600">License issued:</span>{' '}
+                  {new Date(staff.licenseIssueDate).toLocaleDateString()}
+                </p>
               )}
               {staff.licenseExpiry && (
                 <p><span className="font-medium text-gray-600">License expiry:</span>{' '}
@@ -170,6 +243,23 @@ export default function StaffProfilePage() {
                 <p className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-gray-500" /> {staff.facility.name}
                 </p>
+              )}
+              {(staff.staffRole || staff.specificFields) && (
+                <div className="pt-2 border-t">
+                  <p className="font-medium text-gray-600 mb-2">
+                    Role-specific
+                    {staff.staffRole && (
+                      <span className="font-normal text-muted-foreground">
+                        {' '}
+                        ({STAFF_ROLE_LABELS[staff.staffRole] ?? staff.staffRole})
+                      </span>
+                    )}
+                  </p>
+                  <StaffRoleSpecificFieldsDisplay
+                    staffRole={staff.staffRole}
+                    specificFields={staff.specificFields}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>

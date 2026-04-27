@@ -27,7 +27,7 @@ export class FacilitiesController {
   @UseGuards(PermissionsGuard)
   @RequirePermissions(PERMISSIONS.FACILITIES_CREATE)
   create(@Body() dto: CreateFacilityDto, @CurrentUser() user: JwtPayload) {
-    return this.facilitiesService.create(dto, user?.sub);
+    return this.facilitiesService.create(dto, user?.sub, user?.role);
   }
 
   @Get()
@@ -63,7 +63,7 @@ export class FacilitiesController {
     @Body() dto: UpdateFacilityDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.facilitiesService.update(id, dto, user?.sub);
+    return this.facilitiesService.update(id, dto, user?.sub, user?.role);
   }
 
   @Delete(':id')

@@ -1,0 +1,32 @@
+{
+  "common": {
+    "language": "Language",
+    "english": "English",
+    "amharic": "Amharic",
+    "oromo": "Oromo"
+  },
+  "header": {
+    "searchPlaceholder": "Search employees, departments..."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "facilities": "Facilities",
+    "staff": "Staff",
+    "employees": "Employees",
+    "organization": "Organization",
+    "leaveManagement": "Leave Management",
+    "attendance": "Attendance",
+    "payroll": "Payroll",
+    "timesheet": "Timesheet",
+    "assets": "Assets",
+    "expenses": "Expenses",
+    "documents": "Documents",
+    "reports": "Reports",
+    "onboarding": "Onboarding",
+    "notifications": "Notifications",
+    "userManagement": "User Management",
+    "systemSettings": "System Settings",
+    "logout": "Logout",
+    "admin": "Admin"
+  }
+}

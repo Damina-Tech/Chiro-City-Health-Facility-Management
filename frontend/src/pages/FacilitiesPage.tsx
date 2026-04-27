@@ -14,22 +14,26 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { FacilityStatusUpdateDialog } from '@/components/facilities/FacilityStatusUpdateDialog';
 import { PERMISSIONS } from '@/constants/permissions';
-import { facilitiesApi, type Facility, type CreateFacilityDto } from '@/services/api';
+import { facilitiesApi, type Facility } from '@/services/api';
+import { toast } from '@/hooks/use-toast';
 import {
   Building2,
   Search,
@@ -37,13 +41,28 @@ import {
   Edit,
   Trash2,
   Eye,
-  MapPin,
   Phone,
   Mail,
+  RefreshCw,
 } from 'lucide-react';
 
-const FACILITY_TYPES = ['HOSPITAL', 'CLINIC', 'HEALTH_CENTER', 'PHARMACY'];
-const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'TERMINATED'];
+const FACILITY_TYPES = [
+  { value: 'HOSPITAL', label: 'Hospital' },
+  { value: 'CLINIC', label: 'Clinic' },
+  { value: 'HEALTH_CENTER', label: 'Health Center' },
+  { value: 'PHARMACY', label: 'Pharmacy' },
+  { value: 'LAB', label: 'Lab / Diagnostic Center' },
+];
+const STATUS_OPTIONS = [
+  'DRAFT',
+  'PENDING',
+  'SUBMITTED',
+  'APPROVED',
+  'ACTIVE',
+  'INACTIVE',
+  'SUSPENDED',
+  'TERMINATED',
+];
 
 export default function FacilitiesPage() {
   const navigate = useNavigate();
@@ -53,20 +72,14 @@ export default function FacilitiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<CreateFacilityDto>({
-    name: '',
-    type: 'HEALTH_CENTER',
-    status: 'DRAFT',
-  });
-  const [submitError, setSubmitError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [facilityToDelete, setFacilityToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [statusDialogFacility, setStatusDialogFacility] = useState<{ id: string; name: string; status: string } | null>(null);
 
   const canRead = hasPermission(PERMISSIONS.FACILITIES_READ);
   const canCreate = hasPermission(PERMISSIONS.FACILITIES_CREATE);
   const canUpdate = hasPermission(PERMISSIONS.FACILITIES_UPDATE);
   const canDelete = hasPermission(PERMISSIONS.FACILITIES_DELETE);
-  const canEdit = canCreate || canUpdate;
 
   const load = () => {
     if (!canRead) return;
@@ -84,74 +97,44 @@ export default function FacilitiesPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load depends on filters
   }, [canRead, searchTerm, statusFilter, typeFilter]);
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm({
-      name: '',
-      type: 'HEALTH_CENTER',
-      registrationNo: '',
-      licenseNo: '',
-      address: '',
-      phone: '',
-      email: '',
-      status: 'DRAFT',
-    });
-    setSubmitError('');
-    setDialogOpen(true);
+  const openDeleteDialog = (facility: Facility) => {
+    setFacilityToDelete({ id: facility.id, name: facility.name });
+    setDeleteDialogOpen(true);
   };
 
-  const openEdit = (f: Facility) => {
-    setEditingId(f.id);
-    setForm({
-      name: f.name,
-      type: f.type,
-      registrationNo: f.registrationNo ?? '',
-      licenseNo: f.licenseNo ?? '',
-      licenseExpiry: f.licenseExpiry ? f.licenseExpiry.slice(0, 10) : undefined,
-      address: f.address ?? '',
-      phone: f.phone ?? '',
-      email: f.email ?? '',
-      status: f.status,
-    });
-    setSubmitError('');
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError('');
-    const payload: CreateFacilityDto = {
-      name: form.name,
-      type: form.type,
-      status: form.status || 'DRAFT',
-    };
-    if (form.registrationNo) payload.registrationNo = form.registrationNo;
-    if (form.licenseNo) payload.licenseNo = form.licenseNo;
-    if (form.licenseExpiry) payload.licenseExpiry = form.licenseExpiry;
-    if (form.address) payload.address = form.address;
-    if (form.phone) payload.phone = form.phone;
-    if (form.email) payload.email = form.email;
+  const handleConfirmDelete = async () => {
+    if (!facilityToDelete) return;
+    const name = facilityToDelete.name;
     try {
-      if (editingId) {
-        await facilitiesApi.update(editingId, payload);
+      await facilitiesApi.delete(facilityToDelete.id);
+      setDeleteDialogOpen(false);
+      setFacilityToDelete(null);
+      load();
+      toast({
+        title: 'Facility deleted',
+        description: `"${name}" has been removed.`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.toLowerCase().includes('not found')) {
+        setDeleteDialogOpen(false);
+        setFacilityToDelete(null);
+        load();
+        toast({
+          title: 'Already removed',
+          description: 'This facility is no longer in the list.',
+        });
       } else {
-        await facilitiesApi.create(payload);
+        toast({
+          title: 'Delete failed',
+          description: msg || 'Could not delete facility.',
+          variant: 'destructive',
+        });
       }
-      setDialogOpen(false);
-      load();
-    } catch (err: any) {
-      setSubmitError(err?.message || 'Failed to save');
     }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this facility?')) return;
-    try {
-      await facilitiesApi.delete(id);
-      load();
-    } catch {}
   };
 
   const getStatusColor = (status: string) => {
@@ -160,11 +143,12 @@ export default function FacilitiesPage() {
       DRAFT: 'bg-gray-100 text-gray-800',
       SUBMITTED: 'bg-blue-100 text-blue-800',
       APPROVED: 'bg-cyan-100 text-cyan-800',
+      PENDING: 'bg-amber-100 text-amber-800',
       INACTIVE: 'bg-red-100 text-red-800',
       SUSPENDED: 'bg-yellow-100 text-yellow-800',
       TERMINATED: 'bg-red-100 text-red-800',
     };
-    return map[status] || 'bg-gray-100 text-gray-800';
+    return map[status] ?? 'bg-gray-100 text-gray-800';
   };
 
   if (!canRead) {
@@ -182,13 +166,13 @@ export default function FacilitiesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Health Facilities</h1>
-          <p className="text-gray-600 mt-1">Manage facilities and view details</p>
+          <h1 className="text-3xl font-bold text-gray-900">Chiro City Health Facilities</h1>
+          <p className="text-gray-600 mt-1">Register and manage facilities</p>
         </div>
         {canCreate && (
-          <Button onClick={openCreate}>
+          <Button onClick={() => navigate('/facilities/register')}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Facility
+            Register Facility
           </Button>
         )}
       </div>
@@ -229,7 +213,7 @@ export default function FacilitiesPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name, registration, license..."
+                placeholder="Search by name, registration, license, TIN..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -253,7 +237,7 @@ export default function FacilitiesPage() {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 {FACILITY_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -279,8 +263,12 @@ export default function FacilitiesPage() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{f.name}</p>
-                          {f.registrationNo && (
-                            <p className="text-xs text-gray-500">{f.registrationNo}</p>
+                          {(f.registrationNo || f.tin) && (
+                            <p className="text-xs text-gray-500">
+                              {f.registrationNo}
+                              {f.registrationNo && f.tin ? ' · ' : ''}
+                              {f.tin}
+                            </p>
                           )}
                         </div>
                       </TableCell>
@@ -314,16 +302,30 @@ export default function FacilitiesPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           {canUpdate && (
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(f)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setStatusDialogFacility({ id: f.id, name: f.name, status: f.status })}
+                                title="Update status"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/facilities/${f.id}/edit`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           {canDelete && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-red-600"
-                              onClick={() => handleDelete(f.id)}
+                              onClick={() => openDeleteDialog(f)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -342,119 +344,36 @@ export default function FacilitiesPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Facility' : 'Add Facility'}</DialogTitle>
-            <DialogDescription>Enter facility details</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {submitError && (
-              <p className="text-sm text-red-600">{submitError}</p>
-            )}
-            <div>
-              <Label>Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                required
-                placeholder="Facility name"
-              />
-            </div>
-            <div>
-              <Label>Type *</Label>
-              <Select
-                value={form.type}
-                onValueChange={(v) => setForm((p) => ({ ...p, type: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FACILITY_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Registration No</Label>
-                <Input
-                  value={form.registrationNo ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, registrationNo: e.target.value }))}
-                  placeholder="Optional"
-                />
-              </div>
-              <div>
-                <Label>License No</Label>
-                <Input
-                  value={form.licenseNo ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, licenseNo: e.target.value }))}
-                  placeholder="Optional"
-                />
-              </div>
-            </div>
-            {editingId && (
-              <div>
-                <Label>License Expiry</Label>
-                <Input
-                  type="date"
-                  value={form.licenseExpiry ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, licenseExpiry: e.target.value }))}
-                />
-              </div>
-            )}
-            <div>
-              <Label>Address</Label>
-              <Input
-                value={form.address ?? ''}
-                onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Phone</Label>
-                <Input
-                  value={form.phone ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={form.email ?? ''}
-                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select
-                value={form.status ?? 'DRAFT'}
-                onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">{editingId ? 'Update' : 'Create'}</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete facility</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{facilityToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {statusDialogFacility && (
+        <FacilityStatusUpdateDialog
+          open={!!statusDialogFacility}
+          onOpenChange={(open) => !open && setStatusDialogFacility(null)}
+          facilityId={statusDialogFacility.id}
+          facilityName={statusDialogFacility.name}
+          currentStatus={statusDialogFacility.status}
+          onSuccess={load}
+        />
+      )}
     </div>
   );
 }

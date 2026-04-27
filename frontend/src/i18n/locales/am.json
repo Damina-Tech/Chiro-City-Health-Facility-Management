@@ -1,0 +1,32 @@
+{
+  "common": {
+    "language": "ቋንቋ",
+    "english": "እንግሊዝኛ",
+    "amharic": "አማርኛ",
+    "oromo": "ኦሮሞ"
+  },
+  "header": {
+    "searchPlaceholder": "ሰራተኞችን፣ መምሪያዎችን ፈልግ..."
+  },
+  "nav": {
+    "dashboard": "ዳሽቦርድ",
+    "facilities": "ተቋማት",
+    "staff": "ሰራተኞች",
+    "employees": "ሰራተኞች (Employees)",
+    "organization": "ድርጅት",
+    "leaveManagement": "የፈቃድ አስተዳደር",
+    "attendance": "መገኘት",
+    "payroll": "ደመወዝ",
+    "timesheet": "የሰዓት መዝገብ",
+    "assets": "ንብረቶች",
+    "expenses": "ወጪዎች",
+    "documents": "ሰነዶች",
+    "reports": "ሪፖርቶች",
+    "onboarding": "መግቢያ (Onboarding)",
+    "notifications": "ማሳወቂያዎች",
+    "userManagement": "የተጠቃሚ አስተዳደር",
+    "systemSettings": "የስርዓት ቅንብሮች",
+    "logout": "ውጣ",
+    "admin": "አስተዳዳሪ"
+  }
+}

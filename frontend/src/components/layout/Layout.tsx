@@ -11,7 +11,11 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-50" data-id="uk9zngm7p" data-path="src/components/layout/Layout.tsx">
+    <div
+      className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900"
+      data-id="uk9zngm7p"
+      data-path="src/components/layout/Layout.tsx"
+    >
       {/* Sidebar */}
       <Sidebar isCollapsed={isSidebarCollapsed} data-id="ke46fck4a" data-path="src/components/layout/Layout.tsx" />
       

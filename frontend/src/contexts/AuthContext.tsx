@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authApi, type AuthUser } from '@/services/api';
+import { authApi } from '@/services/api';
+import { checkPermission } from '@/lib/permissionCheck';
 
 interface AuthContextType {
   user: User | null;
@@ -30,16 +31,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    const storedUser = localStorage.getItem('hrms_user');
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+    authApi
+      .me()
+      .then((profile) => {
+        const u: User = {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          role: profile.role,
+          department: '',
+          designation: profile.role,
+          permissions: profile.permissions || [],
+        };
+        setUser(u);
+        localStorage.setItem('hrms_user', JSON.stringify(u));
+      })
+      .catch(() => {
+        setUser(null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('hrms_user');
-      }
-    }
-    setIsLoading(false);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  /** Re-sync permissions from DB when tab becomes visible (e.g. admin changed role while user kept the app open). */
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      authApi
+        .me()
+        .then((profile) => {
+          const u: User = {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            role: profile.role,
+            department: '',
+            designation: profile.role,
+            permissions: profile.permissions || [],
+          };
+          setUser(u);
+          localStorage.setItem('hrms_user', JSON.stringify(u));
+        })
+        .catch(() => {
+          /* keep session; token may be briefly invalid */
+        });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -100,15 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Returns true if user has the required permission.
    * Supports: exact match, wildcard "*" or "admin", and resource wildcard (e.g. facilities.* covers facilities.create).
    */
-  const hasPermission = (permission: string): boolean => {
-    if (!user?.permissions?.length) return false;
-    const perms = user.permissions;
-    if (perms.includes('*') || perms.includes('admin')) return true;
-    if (perms.includes(permission)) return true;
-    const [resource, action] = permission.split('.');
-    if (action && perms.includes(`${resource}.*`)) return true;
-    return false;
-  };
+  const hasPermission = (permission: string): boolean =>
+    checkPermission(user?.permissions, permission);
 
   const value = {
     user,

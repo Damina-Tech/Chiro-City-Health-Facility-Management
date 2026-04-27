@@ -3,6 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { useStore } from "@/store";
+import { notificationsApi, type Notification as ApiNotification } from "@/services/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +26,10 @@ import {
   HelpCircle,
   Moon,
   Sun,
+  Languages,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { SupportedLanguage } from "@/i18n/i18n";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -39,34 +46,95 @@ const getInitials = (name: string) => {
 
 const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
   const { user, logout } = useAuth();
-  const [isDark, setIsDark] = React.useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const storeNotifications = useStore((s) => s.notifications);
+  const markAllAsRead = useStore((s) => s.markAllAsRead);
+  const markInAppRead = useStore((s) => s.markAsRead);
 
-  const notifications = [
-    {
-      id: 1,
-      message: "New leave request from Alice Employee",
-      time: "5 min ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      message: "Payroll processing completed",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      message: "Monthly report is ready",
-      time: "2 hours ago",
-      unread: false,
-    },
-  ];
+  const setLanguage = (lng: SupportedLanguage) => {
+    void i18n.changeLanguage(lng);
+  };
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const role = user?.role;
+  const roleNorm = (role ?? "").toUpperCase();
+  // Backend (system) notifications
+  const [apiNotifications, setApiNotifications] = React.useState<ApiNotification[]>([]);
+  const fetchApiNotifications = React.useCallback(() => {
+    notificationsApi
+      .list({ limit: 10 })
+      .then((data) => {
+        setApiNotifications(data);
+      })
+      .catch(() => {
+        setApiNotifications([]);
+      });
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const safeFetch = () => {
+      notificationsApi
+        .list({ limit: 10 })
+        .then((data) => {
+          if (mounted) setApiNotifications(data);
+        })
+        .catch(() => {
+          if (mounted) setApiNotifications([]);
+        });
+    };
+    safeFetch();
+    const id = window.setInterval(safeFetch, 5000);
+    return () => {
+      mounted = false;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const visibleNotifications = React.useMemo(() => {
+    if (!roleNorm) {
+      return storeNotifications.filter((n) => n.audience.type === "all");
+    }
+    return storeNotifications.filter((n) =>
+      n.audience.type === "all"
+        ? true
+        : n.audience.roles.some((r) => r.toUpperCase() === roleNorm)
+    );
+  }, [roleNorm, storeNotifications]);
+
+  const unreadCount =
+    visibleNotifications.filter((n) => !n.isRead).length +
+    apiNotifications.filter((n) => !n.readAt).length;
+  const recentInApp = visibleNotifications.slice(0, 4);
+  const recentApi = apiNotifications.slice(0, 4);
+
+  const handleApiNotificationClick = (n: ApiNotification) => {
+    if (!n.readAt) {
+      // Optimistic update for instant bell count decrease.
+      setApiNotifications((prev) =>
+        prev.map((item) =>
+          item.id === n.id ? { ...item, readAt: new Date().toISOString() } : item
+        )
+      );
+      void notificationsApi.markRead(n.id).catch(() => {
+        // Ignore here; list polling will reconcile server state.
+      });
+    }
+    navigate("/notifications");
+  };
+
+  const handleInAppNotificationClick = (id: string, isRead: boolean) => {
+    if (!isRead) {
+      markInAppRead(id);
+    }
+    navigate("/notifications");
+  };
 
   return (
     <header
-      className="bg-white border-b border-gray-200 px-6 py-4"
+      className="bg-white border-b border-gray-200 px-6 py-4 dark:bg-gray-900 dark:border-gray-800"
       data-id="4rqgu5shv"
       data-path="src/components/layout/Header.tsx"
     >
@@ -108,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
               data-path="src/components/layout/Header.tsx"
             />
             <Input
-              placeholder="Search employees, departments..."
+              placeholder={t("header.searchPlaceholder")}
               className="pl-10 w-80"
               data-id="qh5v0ojwx"
               data-path="src/components/layout/Header.tsx"
@@ -122,11 +190,33 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
           data-id="n5jz4un9t"
           data-path="src/components/layout/Header.tsx"
         >
+          {/* Language */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="p-2" aria-label={t("common.language")}>
+                <Languages className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>{t("common.language")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setLanguage("en")}>
+                {t("common.english")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage("am")}>
+                {t("common.amharic")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage("or")}>
+                {t("common.oromo")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Theme Toggle */}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsDark(!isDark)}
+            onClick={() => setTheme(isDark ? "light" : "dark")}
             className="p-2"
             data-id="80hkbdl3z"
             data-path="src/components/layout/Header.tsx"
@@ -148,6 +238,9 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
 
           {/* Notifications */}
           <DropdownMenu
+            onOpenChange={(open) => {
+              if (open) fetchApiNotifications();
+            }}
             data-id="thot3m9r0"
             data-path="src/components/layout/Header.tsx"
           >
@@ -196,6 +289,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                   variant="ghost"
                   size="sm"
                   className="text-xs"
+                  onClick={markAllAsRead}
                   data-id="ms1kqkmqx"
                   data-path="src/components/layout/Header.tsx"
                 >
@@ -206,50 +300,68 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isCollapsed }) => {
                 data-id="3dt2r6psc"
                 data-path="src/components/layout/Header.tsx"
               />
-              {notifications.map((notification) => (
-                <DropdownMenuItem
-                  key={notification.id}
-                  className="flex flex-col items-start p-4"
-                  data-id="gc9a8fb34"
-                  data-path="src/components/layout/Header.tsx"
-                >
-                  <div
-                    className="flex items-center justify-between w-full"
-                    data-id="ekzs09m9k"
-                    data-path="src/components/layout/Header.tsx"
-                  >
-                    <p
-                      className={`text-sm ${
-                        notification.unread ? "font-medium" : "text-gray-600"
-                      }`}
-                      data-id="ulju4jo6b"
-                      data-path="src/components/layout/Header.tsx"
+              {recentInApp.length === 0 && recentApi.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground">
+                  No notifications
+                </div>
+              ) : (
+                <>
+                  {recentApi.map((n) => (
+                    <DropdownMenuItem
+                      key={`api-${n.id}`}
+                      className="flex flex-col items-start p-4"
+                      onClick={() => handleApiNotificationClick(n)}
                     >
-                      {notification.message}
-                    </p>
-                    {notification.unread && (
-                      <div
-                        className="h-2 w-2 bg-blue-600 rounded-full"
-                        data-id="c6fgg2mmo"
-                        data-path="src/components/layout/Header.tsx"
-                      ></div>
-                    )}
-                  </div>
-                  <p
-                    className="text-xs text-gray-500 mt-1"
-                    data-id="t23dcthx9"
-                    data-path="src/components/layout/Header.tsx"
-                  >
-                    {notification.time}
-                  </p>
-                </DropdownMenuItem>
-              ))}
+                      <div className="flex items-center justify-between w-full">
+                        <p
+                          className={`text-sm ${!n.readAt ? "font-medium" : "text-gray-600 dark:text-gray-300"}`}
+                        >
+                          {n.title}
+                        </p>
+                        {!n.readAt && <div className="h-2 w-2 bg-blue-600 rounded-full" />}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{n.message}</p>
+                    </DropdownMenuItem>
+                  ))}
+                  {recentInApp.map((notification) => (
+                    <DropdownMenuItem
+                      key={`app-${notification.id}`}
+                      className="flex flex-col items-start p-4"
+                      onClick={() =>
+                        handleInAppNotificationClick(
+                          notification.id,
+                          notification.isRead
+                        )
+                      }
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <p
+                          className={`text-sm ${
+                            !notification.isRead
+                              ? "font-medium"
+                              : "text-gray-600 dark:text-gray-300"
+                          }`}
+                        >
+                          {notification.title}
+                        </p>
+                        {!notification.isRead && (
+                          <div className="h-2 w-2 bg-blue-600 rounded-full" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {notification.message}
+                      </p>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
               <DropdownMenuSeparator
                 data-id="mrdrykd8c"
                 data-path="src/components/layout/Header.tsx"
               />
               <DropdownMenuItem
                 className="text-center text-blue-600 hover:text-blue-700"
+                onClick={() => navigate("/notifications")}
                 data-id="0ay0omfwu"
                 data-path="src/components/layout/Header.tsx"
               >

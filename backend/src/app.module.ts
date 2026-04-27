@@ -10,6 +10,7 @@ import { FacilityDocumentsModule } from './facility-documents/facility-documents
 import { StaffDocumentsModule } from './staff-documents/staff-documents.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
+import { UsersModule } from './users/users.module';
 import { DashboardController } from './dashboard/dashboard.controller';
 
 @Module({
@@ -27,6 +28,7 @@ import { DashboardController } from './dashboard/dashboard.controller';
     FacilityDocumentsModule,
     StaffDocumentsModule,
     NotificationsModule,
+    UsersModule,
   ],
   controllers: [DashboardController],
 })

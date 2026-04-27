@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 import { PERMISSIONS } from '@/constants/permissions';
 import {
   facilitiesApi,
@@ -20,6 +21,7 @@ import {
   type Facility,
   type Staff,
   type FacilityDocument,
+  type FacilitySpecificFields,
 } from '@/services/api';
 import {
   Building2,
@@ -31,13 +33,18 @@ import {
   Upload,
   Users,
   Calendar,
+  RefreshCw,
 } from 'lucide-react';
+import { FacilityStatusUpdateDialog } from '@/components/facilities/FacilityStatusUpdateDialog';
 
 export default function FacilityProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  const [facility, setFacility] = useState<(Facility & { staffList?: Staff[]; services?: string[] }) | null>(null);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [facility, setFacility] = useState<
+    (Facility & { staffList?: Staff[]; services?: string[]; specificFields?: FacilitySpecificFields | null }) | null
+  >(null);
   const [documents, setDocuments] = useState<FacilityDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -47,8 +54,14 @@ export default function FacilityProfilePage() {
   const [uploading, setUploading] = useState(false);
 
   const canReadFacility = hasPermission(PERMISSIONS.FACILITIES_READ);
+  const canUpdateFacility = hasPermission(PERMISSIONS.FACILITIES_UPDATE);
   const canUpload = hasPermission(PERMISSIONS.DOCUMENTS_FACILITY_UPLOAD);
   const canListDocs = hasPermission(PERMISSIONS.DOCUMENTS_FACILITY_READ);
+
+  const refetchFacility = () => {
+    if (!id) return;
+    facilitiesApi.get(id).then(setFacility).catch(() => setFacility(null));
+  };
 
   useEffect(() => {
     if (!id || !canReadFacility) return;
@@ -77,7 +90,17 @@ export default function FacilityProfilePage() {
       setUploadFile(null);
       setUploadName('');
       setUploadType('other');
-    } catch {}
+      toast({
+        title: 'Document uploaded',
+        description: 'The file has been added to this facility.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Could not upload file.',
+        variant: 'destructive',
+      });
+    }
     setUploading(false);
   };
 
@@ -122,14 +145,37 @@ export default function FacilityProfilePage() {
         <Button variant="ghost" size="icon" onClick={() => navigate('/facilities')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-gray-900">{facility.name}</h1>
           <p className="text-gray-600 flex items-center gap-2 mt-1">
             <Badge className={getStatusColor(facility.status)}>{facility.status}</Badge>
             <Badge variant="outline">{facility.type}</Badge>
+            {canUpdateFacility && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setStatusDialogOpen(true)}
+                title="Update status"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                Change status
+              </Button>
+            )}
           </p>
         </div>
       </div>
+
+      {canUpdateFacility && (
+        <FacilityStatusUpdateDialog
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          facilityId={facility.id}
+          facilityName={facility.name}
+          currentStatus={facility.status}
+          onSuccess={refetchFacility}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -141,31 +187,65 @@ export default function FacilityProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {facility.ownershipType && (
+                <p><span className="font-medium text-gray-600">Ownership:</span> {facility.ownershipType}</p>
+              )}
               {facility.registrationNo && (
                 <p><span className="font-medium text-gray-600">Registration:</span> {facility.registrationNo}</p>
               )}
-              {facility.licenseNo && (
-                <p><span className="font-medium text-gray-600">License:</span> {facility.licenseNo}</p>
+              {facility.tin && (
+                <p><span className="font-medium text-gray-600">TIN:</span> {facility.tin}</p>
               )}
-              {facility.licenseExpiry && (
-                <p><span className="font-medium text-gray-600">License expiry:</span>{' '}
-                  {new Date(facility.licenseExpiry).toLocaleDateString()}
-                </p>
+              {facility.description && (
+                <p><span className="font-medium text-gray-600">Description:</span> {facility.description}</p>
               )}
-              {facility.address && (
+              {(facility.region || facility.city || facility.woreda || facility.kebele || facility.streetAddress) && (
+                <div className="space-y-1">
+                  <p className="font-medium text-gray-600">Location</p>
+                  <p className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-gray-500 shrink-0" />
+                    {[facility.region, facility.city, facility.woreda, facility.kebele, facility.streetAddress]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </p>
+                  {facility.gpsLat != null && facility.gpsLng != null && (
+                    <p className="text-sm text-gray-500">GPS: {facility.gpsLat}, {facility.gpsLng}</p>
+                  )}
+                </div>
+              )}
+              {facility.address && !facility.streetAddress && (
                 <p className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-gray-500" /> {facility.address}
                 </p>
               )}
-              {facility.phone && (
-                <p className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-gray-500" /> {facility.phone}
-                </p>
+              {(facility.phone || facility.altPhone || facility.email || facility.website) && (
+                <div className="space-y-1">
+                  <p className="font-medium text-gray-600">Contact</p>
+                  {facility.phone && (
+                    <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-gray-500" /> {facility.phone}</p>
+                  )}
+                  {facility.altPhone && <p className="text-sm">Alt: {facility.altPhone}</p>}
+                  {facility.email && (
+                    <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-gray-500" /> {facility.email}</p>
+                  )}
+                  {facility.website && (
+                    <p className="text-sm"><a href={facility.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{facility.website}</a></p>
+                  )}
+                </div>
               )}
-              {facility.email && (
-                <p className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-500" /> {facility.email}
-                </p>
+              {(facility.licenseNo || facility.licenseExpiry || facility.regulatoryAuthority) && (
+                <div className="space-y-1">
+                  <p className="font-medium text-gray-600">Legal & compliance</p>
+                  {facility.licenseNo && <p>License: {facility.licenseNo}</p>}
+                  {facility.licenseExpiry && (
+                    <p>Expiry: {new Date(facility.licenseExpiry).toLocaleDateString()}</p>
+                  )}
+                  {facility.regulatoryAuthority && <p>Authority: {facility.regulatoryAuthority}</p>}
+                  {facility.accreditationLevel && <p>Accreditation: {facility.accreditationLevel}</p>}
+                </div>
+              )}
+              {facility.operatingHours && (
+                <p><span className="font-medium text-gray-600">Operating hours:</span> {facility.operatingHours}</p>
               )}
               {facility.services && Array.isArray(facility.services) && facility.services.length > 0 && (
                 <div>
@@ -174,6 +254,25 @@ export default function FacilityProfilePage() {
                     {facility.services.map((s) => (
                       <Badge key={s} variant="secondary">{s}</Badge>
                     ))}
+                  </div>
+                </div>
+              )}
+              {facility.specificFields && (facility.specificFields.hospital || facility.specificFields.clinic || facility.specificFields.healthCenter || facility.specificFields.pharmacy) && (
+                <div className="pt-2 border-t">
+                  <p className="font-medium text-gray-600 mb-2">Facility-specific</p>
+                  <div className="text-sm space-y-1">
+                    {facility.specificFields.hospital && (
+                      <p>Beds: {facility.specificFields.hospital.numberOfBeds ?? '—'} · Departments: {facility.specificFields.hospital.numberOfDepartments ?? '—'} · ICU: {facility.specificFields.hospital.icuAvailability ? 'Yes' : 'No'} · Emergency: {facility.specificFields.hospital.emergencyService ? 'Yes' : 'No'} · Lab: {facility.specificFields.hospital.laboratoryAvailable ? 'Yes' : 'No'} · Blood bank: {facility.specificFields.hospital.bloodBankAvailable ? 'Yes' : 'No'}</p>
+                    )}
+                    {facility.specificFields.clinic && (
+                      <p>Category: {facility.specificFields.clinic.clinicCategory ?? '—'} · Specialization: {facility.specificFields.clinic.specialization ?? '—'} · Consultation rooms: {facility.specificFields.clinic.consultationRoomsCount ?? '—'} · Lab: {facility.specificFields.clinic.laboratoryAvailable ? 'Yes' : 'No'}</p>
+                    )}
+                    {facility.specificFields.healthCenter && (
+                      <p>Catchment: {facility.specificFields.healthCenter.catchmentPopulation ?? '—'} · Maternal care: {facility.specificFields.healthCenter.maternalCareAvailable ? 'Yes' : 'No'} · Vaccination: {facility.specificFields.healthCenter.vaccinationService ? 'Yes' : 'No'} · Community program: {facility.specificFields.healthCenter.communityHealthProgram ? 'Yes' : 'No'}</p>
+                    )}
+                    {facility.specificFields.pharmacy && (
+                      <p>Type: {facility.specificFields.pharmacy.pharmacyType ?? '—'} · Drug storage: {facility.specificFields.pharmacy.drugStorageFacility ? 'Yes' : 'No'} · Cold storage: {facility.specificFields.pharmacy.coldStorageAvailable ? 'Yes' : 'No'}{facility.specificFields.pharmacy.controlledDrugAuthorizationNumber ? ` · Controlled drug auth: ${facility.specificFields.pharmacy.controlledDrugAuthorizationNumber}` : ''}</p>
+                    )}
                   </div>
                 </div>
               )}

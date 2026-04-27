@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useNotifications } from "@/store";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Bell,
   BellOff,
@@ -47,30 +47,49 @@ import {
 import { format } from "date-fns";
 type NotificationType = "info" | "success" | "warning" | "error";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  isRead: boolean;
-  createdAt: Date;
-}
+type RecipientTarget = "all" | "role";
+
+const ROLE_OPTIONS = [
+  { value: "STAFF", label: "Staff" },
+  { value: "DOCTOR", label: "Doctor" },
+  { value: "NURSE", label: "Nurse" },
+  { value: "PHARMACIST", label: "Pharmacist" },
+  { value: "LAB_TECH", label: "Lab tech" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "OFFICER", label: "Officer" },
+] as const;
 
 export default function NotificationsPage() {
-  // System notifications from API (license expiry, staff assignment, facility activation)
+  // Notifications from API (per-user inbox)
   const [apiNotifications, setApiNotifications] = useState<ApiNotification[]>([]);
-  useEffect(() => {
-    notificationsApi.list({ limit: 20 }).then(setApiNotifications).catch(() => setApiNotifications([]));
+
+  // Auth / permissions
+  const { user, hasPermission } = useAuth();
+  const canManageNotifications = (user?.role ?? "").toUpperCase() === "ADMIN";
+
+  const refresh = React.useCallback(() => {
+    notificationsApi
+      .list({ limit: 50 })
+      .then(setApiNotifications)
+      .catch(() => setApiNotifications([]));
   }, []);
 
-  const markApiRead = (id: string) => {
-    notificationsApi.markRead(id).then(() => {
-      setApiNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
-    });
-  };
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  // Local notification list state
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const markApiRead = (id: string) => {
+    notificationsApi
+      .markRead(id)
+      .then((updated) => {
+        setApiNotifications((prev) =>
+          prev.map((n) => (n.id === id ? updated : n)),
+        );
+      })
+      .catch(() => {
+        // ignore; backend enforces access
+      });
+  };
 
   // Filter state
   const [filter, setFilter] = useState<
@@ -86,7 +105,8 @@ export default function NotificationsPage() {
     title: "",
     message: "",
     type: "info" as NotificationType,
-    recipients: "all",
+    recipientTarget: "all" as RecipientTarget,
+    role: "STAFF",
     channels: {
       inApp: true,
       email: false,
@@ -127,61 +147,49 @@ export default function NotificationsPage() {
     },
   });
 
-  // Add notification helper
-  const addNotification = (
-    notif: Omit<Notification, "id" | "isRead" | "createdAt">
-  ) => {
-    setNotifications((prev) => [
-      ...prev,
-      {
-        ...notif,
-        id: Date.now().toString(),
-        isRead: false,
-        createdAt: new Date(),
-      },
-    ]);
+  const toUiType = (backendType: string | null | undefined): NotificationType => {
+    const t = (backendType || "").toLowerCase();
+    if (t.includes("error") || t.includes("failed")) return "error";
+    if (t.includes("warn") || t.includes("expiry") || t.includes("pending")) return "warning";
+    if (t.includes("success") || t.includes("approved") || t.includes("activated")) return "success";
+    return "info";
   };
 
-  // Mark as read
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-  };
-
-  // Mark all read
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
-
-  // Clear all notifications
-  const clearNotifications = () => {
-    setNotifications([]);
-  };
-
-  // Filtered notifications list
-  const filteredNotifications = notifications.filter((notification) => {
-    if (filter === "unread") return !notification.isRead;
-    if (filter === "read") return notification.isRead;
-    if (filter !== "all" && filter !== notification.type) return false;
+  const filteredApi = apiNotifications.filter((n) => {
+    const uiType = toUiType(n.type);
+    const isRead = Boolean(n.readAt);
+    if (filter === "unread") return !isRead;
+    if (filter === "read") return isRead;
+    if (filter !== "all" && filter !== uiType) return false;
     return true;
   });
 
+  // Filtered notifications list
+  const filteredNotifications = filteredApi.map((n) => ({
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    type: toUiType(n.type),
+    isRead: Boolean(n.readAt),
+    createdAt: new Date(n.createdAt),
+  }));
+
   // Unread count
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = apiNotifications.filter((n) => !n.readAt).length;
 
   // Stats for display
   const stats = {
-    total: notifications.length,
+    total: apiNotifications.length,
     unread: unreadCount,
-    today: notifications.filter(
+    today: apiNotifications.filter(
       (n) =>
-        format(n.createdAt, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
+        format(new Date(n.createdAt), "yyyy-MM-dd") ===
+        format(new Date(), "yyyy-MM-dd")
     ).length,
-    thisWeek: notifications.filter((n) => {
+    thisWeek: apiNotifications.filter((n) => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      return n.createdAt >= weekAgo;
+      return new Date(n.createdAt) >= weekAgo;
     }).length,
   };
 
@@ -215,40 +223,38 @@ export default function NotificationsPage() {
   // Handle sending notification
   const handleSendNotification = () => {
     if (!notificationForm.title || !notificationForm.message) {
-      addNotification({
-        title: "Missing Information",
-        message: "Please provide title and message",
-        type: "error",
-      });
       return;
     }
 
-    addNotification({
-      title: notificationForm.title,
-      message: notificationForm.message,
-      type: notificationForm.type,
-    });
+    if (!canManageNotifications) return;
 
-    // Simulate sending via other channels
-    if (notificationForm.channels.email) {
-      console.log("Sending email notification...");
-    }
-    if (notificationForm.channels.push) {
-      console.log("Sending push notification...");
-    }
-
-    addNotification({
-      title: "Notification Sent",
-      message: `Notification sent to ${notificationForm.recipients} recipients`,
-      type: "success",
-    });
+    void notificationsApi
+      .broadcast({
+        title: notificationForm.title,
+        message: notificationForm.message,
+        type: "ANNOUNCEMENT",
+        audience: notificationForm.recipientTarget === "all" ? "ALL" : "ROLE",
+        role:
+          notificationForm.recipientTarget === "all"
+            ? undefined
+            : notificationForm.role,
+        inApp: true,
+        email: false,
+      })
+      .then(() => {
+        refresh();
+      })
+      .catch(() => {
+        // ignore; backend enforces admin-only
+      });
 
     setSendDialog(false);
     setNotificationForm({
       title: "",
       message: "",
       type: "info",
-      recipients: "all",
+      recipientTarget: "all",
+      role: "STAFF",
       channels: {
         inApp: true,
         email: false,
@@ -258,25 +264,23 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllAsRead = () => {
-    markAllAsRead();
-    addNotification({
-      title: "All Marked as Read",
-      message: "All notifications have been marked as read",
-      type: "success",
-    });
+    // Backend doesn't currently provide a bulk mark-read endpoint; mark read on click.
   };
 
   const handleClearAll = () => {
-    clearNotifications();
-    addNotification({
-      title: "Notifications Cleared",
-      message: "All notifications have been cleared",
-      type: "success",
-    });
+    if (!canManageNotifications) return;
+    void notificationsApi
+      .clearAll()
+      .then(() => {
+        setApiNotifications([]);
+      })
+      .catch(() => {
+        // ignore; backend enforces auth
+      });
   };
 
   const handleMarkAsRead = (id: string) => {
-    markAsRead(id);
+    markApiRead(id);
   };
 
   return (
@@ -297,60 +301,18 @@ export default function NotificationsPage() {
               </Button>
             </DialogTrigger>
           </Dialog>
-          <Dialog open={sendDialog} onOpenChange={setSendDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Send className="mr-2 h-4 w-4" />
-                Send Notification
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+          {canManageNotifications && (
+            <Dialog open={sendDialog} onOpenChange={setSendDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Notification
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          )}
         </div>
       </div>
-
-      {/* System notifications (license expiry, staff assignment, facility activation) */}
-      {apiNotifications.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              System Notifications
-            </CardTitle>
-            <CardDescription>
-              License expiries, staff assignments, facility activations
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {apiNotifications.slice(0, 10).map((n) => (
-                <div
-                  key={n.id}
-                  className={`flex items-start justify-between gap-4 p-3 rounded-lg border ${
-                    n.readAt ? "bg-muted/30" : "bg-background"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{n.title}</p>
-                    <p className="text-sm text-muted-foreground">{n.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(n.createdAt), "MMM d, yyyy HH:mm")} · {n.type}
-                    </p>
-                  </div>
-                  {!n.readAt && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => markApiRead(n.id)}
-                    >
-                      Mark read
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -411,7 +373,7 @@ export default function NotificationsPage() {
             <div className="flex gap-2">
               <Select
                 value={filter}
-                // onValueChange={setFilter}
+                onValueChange={(v) => setFilter(v as typeof filter)}
               >
                 <SelectTrigger className="w-32">
                   <Filter className="mr-2 h-4 w-4" />
@@ -436,9 +398,11 @@ export default function NotificationsPage() {
                   Mark All Read
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={handleClearAll}>
-                Clear All
-              </Button>
+              {canManageNotifications && (
+                <Button variant="outline" size="sm" onClick={handleClearAll}>
+                  Clear All
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -474,9 +438,14 @@ export default function NotificationsPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {notification.message}
-                        </p>
+                        <details className="mb-2">
+                          <summary className="cursor-pointer text-xs text-blue-600">
+                            Show message
+                          </summary>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {notification.message}
+                          </p>
+                        </details>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>
                             {format(
@@ -495,10 +464,19 @@ export default function NotificationsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      // onClick={(e) => {
-                      //   e.stopPropagation();
-                      //   removeNotification(notification.id);
-                      // }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void notificationsApi
+                          .remove(notification.id)
+                          .then(() => {
+                            setApiNotifications((prev) =>
+                              prev.filter((n) => n.id !== notification.id),
+                            );
+                          })
+                          .catch(() => {
+                            // ignore; backend enforces ownership
+                          });
+                      }}
                     >
                       ×
                     </Button>
@@ -510,7 +488,8 @@ export default function NotificationsPage() {
         </CardContent>
       </Card>
 
-      {/* Send Notification Dialog */}
+      {/* Send Notification Dialog (admin only) */}
+      {canManageNotifications && (
       <Dialog open={sendDialog} onOpenChange={setSendDialog}>
         <DialogContent>
           <DialogHeader>
@@ -554,9 +533,12 @@ export default function NotificationsPage() {
                 <Label htmlFor="type">Type</Label>
                 <Select
                   value={notificationForm.type}
-                  // onValueChange={(value) =>
-                  //   setNotificationForm((prev) => ({ ...prev, type: value }))
-                  // }
+                  onValueChange={(value) =>
+                    setNotificationForm((prev) => ({
+                      ...prev,
+                      type: value as NotificationType,
+                    }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -572,11 +554,11 @@ export default function NotificationsPage() {
               <div>
                 <Label htmlFor="recipients">Recipients</Label>
                 <Select
-                  value={notificationForm.recipients}
+                  value={notificationForm.recipientTarget}
                   onValueChange={(value) =>
                     setNotificationForm((prev) => ({
                       ...prev,
-                      recipients: value,
+                      recipientTarget: value as RecipientTarget,
                     }))
                   }
                 >
@@ -585,13 +567,34 @@ export default function NotificationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Users</SelectItem>
-                    <SelectItem value="managers">Managers Only</SelectItem>
-                    <SelectItem value="hr">HR Team</SelectItem>
-                    <SelectItem value="department">Department</SelectItem>
+                    <SelectItem value="role">By Role</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {notificationForm.recipientTarget === "role" && (
+              <div>
+                <Label>Target role</Label>
+                <Select
+                  value={notificationForm.role}
+                  onValueChange={(value) =>
+                    setNotificationForm((prev) => ({ ...prev, role: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Delivery Channels</Label>
               <div className="space-y-3 mt-2">
@@ -654,6 +657,7 @@ export default function NotificationsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Settings Dialog */}
       <Dialog open={settingsDialog} onOpenChange={setSettingsDialog}>
@@ -865,11 +869,6 @@ export default function NotificationsPage() {
               </Button>
               <Button
                 onClick={() => {
-                  addNotification({
-                    title: "Settings Saved",
-                    message: "Your notification preferences have been updated",
-                    type: "success",
-                  });
                   setSettingsDialog(false);
                 }}
               >
