@@ -91,7 +91,7 @@ const LoginPage: React.FC = () => {
           <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center mb-4" data-id="wkufmetdd" data-path="src/pages/LoginPage.tsx">
             <Building2 className="h-8 w-8 text-white" data-id="famyievx9" data-path="src/pages/LoginPage.tsx" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100" data-id="5gnil7qud" data-path="src/pages/LoginPage.tsx">HRMS Portal</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100" data-id="5gnil7qud" data-path="src/pages/LoginPage.tsx">Health Sector Portal</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2" data-id="51tyo77m1" data-path="src/pages/LoginPage.tsx">Sign in to your account</p>
         </div>
 
@@ -104,11 +104,6 @@ const LoginPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-6" data-id="1mt5nb4b9" data-path="src/pages/LoginPage.tsx">
             {/* Demo Credentials */}
-            <div className="bg-blue-50 dark:bg-blue-950/40 p-3 rounded-lg text-sm" data-id="vd6ukug4y" data-path="src/pages/LoginPage.tsx">
-              <p className="font-medium text-blue-800 dark:text-blue-300 mb-1" data-id="fyvkn5g5t" data-path="src/pages/LoginPage.tsx">Demo (Chiro Health):</p>
-              <p className="text-blue-700 dark:text-blue-300" data-id="xx14ho2u4" data-path="src/pages/LoginPage.tsx">Email: admin@chirohealth.com</p>
-              <p className="text-blue-700 dark:text-blue-300" data-id="woeu2rnkp" data-path="src/pages/LoginPage.tsx">Password: password123</p>
-            </div>
 
             <form onSubmit={handleLogin} className="space-y-4" data-id="1x51ohzy6" data-path="src/pages/LoginPage.tsx">
               <div className="space-y-2" data-id="oc9bic79t" data-path="src/pages/LoginPage.tsx">
