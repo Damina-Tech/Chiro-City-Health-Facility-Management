@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +39,7 @@ import {
 import { FacilityStatusUpdateDialog } from '@/components/facilities/FacilityStatusUpdateDialog';
 
 export default function FacilityProfilePage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
@@ -124,7 +126,7 @@ export default function FacilityProfilePage() {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
         <p className="font-medium">No access</p>
-        <p className="text-sm mt-1">You don&apos;t have permission to view this facility.</p>
+        <p className="text-sm mt-1">{t('facilityProfile.noAccess')}</p>
       </div>
     );
   }
@@ -159,7 +161,7 @@ export default function FacilityProfilePage() {
                 title="Update status"
               >
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                Change status
+                {t('facilityProfile.actions.changeStatus')}
               </Button>
             )}
           </p>
@@ -183,7 +185,7 @@ export default function FacilityProfilePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Details
+                {t('facilityProfile.details')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -284,14 +286,14 @@ export default function FacilityProfilePage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Staff ({staffList.length})
+                  {t('facilityProfile.staff')} ({staffList.length})
                 </CardTitle>
-                <CardDescription>Assigned to this facility</CardDescription>
+                <CardDescription>{t('facilityProfile.staffAssigned')}</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
               {staffList.length === 0 ? (
-                <p className="text-gray-500 text-sm">No staff assigned.</p>
+                <p className="text-gray-500 text-sm">{t('facilityProfile.noStaff')}</p>
               ) : (
                 <div className="space-y-3">
                   {staffList.map((s) => (
@@ -324,22 +326,22 @@ export default function FacilityProfilePage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Documents
+                  {t('facilityProfile.documents')}
                 </CardTitle>
-                <CardDescription>Facility documents</CardDescription>
+                <CardDescription>{t('facilityProfile.facilityDocuments')}</CardDescription>
               </div>
               {canUpload && (
                 <Button size="sm" onClick={() => setUploadOpen(true)}>
                   <Upload className="h-4 w-4 mr-1" />
-                  Upload
+                  {t('common.upload')}
                 </Button>
               )}
             </CardHeader>
             <CardContent>
               {!canListDocs && !canUpload ? (
-                <p className="text-gray-500 text-sm">No access to documents.</p>
+                <p className="text-gray-500 text-sm">{t('facilityProfile.noDocumentsAccess')}</p>
               ) : documents.length === 0 ? (
-                <p className="text-gray-500 text-sm">No documents uploaded.</p>
+                <p className="text-gray-500 text-sm">{t('facilityProfile.noDocuments')}</p>
               ) : (
                 <ul className="space-y-2">
                   {documents.map((d) => (
@@ -361,11 +363,11 @@ export default function FacilityProfilePage() {
       <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upload Facility Document</DialogTitle>
+            <DialogTitle>{t('facilityProfile.uploadTitle')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpload} className="space-y-4">
             <div>
-              <Label>File</Label>
+              <Label>{t('common.file')}</Label>
               <Input
                 type="file"
                 onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
@@ -373,27 +375,27 @@ export default function FacilityProfilePage() {
               />
             </div>
             <div>
-              <Label>Name</Label>
+              <Label>{t('common.name')}</Label>
               <Input
                 value={uploadName}
                 onChange={(e) => setUploadName(e.target.value)}
-                placeholder="Document name"
+                placeholder={t('facilityProfile.documentNamePlaceholder')}
               />
             </div>
             <div>
-              <Label>Type</Label>
+              <Label>{t('common.type')}</Label>
               <Input
                 value={uploadType}
                 onChange={(e) => setUploadType(e.target.value)}
-                placeholder="e.g. license, registration"
+                placeholder={t('facilityProfile.documentTypePlaceholder')}
               />
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setUploadOpen(false)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={!uploadFile || uploading}>
-                {uploading ? 'Uploading...' : 'Upload'}
+                {uploading ? t('common.uploading') : t('common.upload')}
               </Button>
             </div>
           </form>

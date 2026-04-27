@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,6 +104,7 @@ function buildPayload(form: FormState): CreateStaffDto {
 }
 
 export default function StaffRegistrationPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
@@ -277,16 +279,16 @@ export default function StaffRegistrationPage() {
   if (!isEdit && !canCreate) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
-        <p className="font-medium">No access</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/staff')}>Back</Button>
+        <p className="font-medium">{t('common.noAccess')}</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/staff')}>{t('common.back')}</Button>
       </div>
     );
   }
   if (isEdit && !canUpdate) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
-        <p className="font-medium">No access</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/staff')}>Back</Button>
+        <p className="font-medium">{t('common.noAccess')}</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/staff')}>{t('common.back')}</Button>
       </div>
     );
   }
@@ -313,8 +315,8 @@ export default function StaffRegistrationPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{isEdit ? 'Edit staff' : 'Register staff'}</h1>
-          <p className="text-gray-600 text-sm mt-0.5">Step {step} of {totalSteps}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{isEdit ? t('staffRegistration.editTitle') : t('staffRegistration.registerTitle')}</h1>
+          <p className="text-gray-600 text-sm mt-0.5">{t('common.stepOf', { step, total: totalSteps })}</p>
         </div>
       </div>
 
@@ -345,7 +347,7 @@ export default function StaffRegistrationPage() {
       {!isEdit && isOfficer && (
         <Alert className="border-blue-200 bg-blue-50/80">
           <Info className="h-4 w-4 text-blue-600" />
-          <AlertTitle className="text-blue-900">Admin approval required</AlertTitle>
+          <AlertTitle className="text-blue-900">{t('common.adminApprovalRequired')}</AlertTitle>
           <AlertDescription className="text-blue-800">
             New staff you register is saved as <strong>SUBMITTED</strong> until an administrator approves and sets the final status (e.g. ACTIVE).
           </AlertDescription>
@@ -356,7 +358,7 @@ export default function StaffRegistrationPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">{wizardSteps[step - 1]?.title ?? 'Review & submit'}</CardTitle>
+          <CardTitle className="text-lg">{wizardSteps[step - 1]?.title ?? t('common.reviewAndSubmit')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 1 && (
@@ -544,15 +546,15 @@ export default function StaffRegistrationPage() {
 
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1}>
-          <ArrowLeft className="h-4 w-4 mr-2" />Back
+          <ArrowLeft className="h-4 w-4 mr-2" />{t('common.back')}
         </Button>
         {!isLastStep ? (
           <Button onClick={() => setStep((s) => Math.min(totalSteps, s + 1))}>
-            Next<ArrowRight className="h-4 w-4 ml-2" />
+            {t('common.next')}<ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : isEdit ? 'Confirm & update' : 'Confirm & register'}
+            {loading ? t('common.saving') : isEdit ? t('common.confirmAndUpdate') : t('common.confirmAndRegister')}
           </Button>
         )}
       </div>

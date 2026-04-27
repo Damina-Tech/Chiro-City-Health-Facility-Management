@@ -3,7 +3,25 @@
     "language": "Afaan",
     "english": "Ingiliffa",
     "amharic": "Amaaraa",
-    "oromo": "Oromoo"
+    "oromo": "Oromoo",
+    "loading": "Fe'amaa jira...",
+    "cancel": "Haqi",
+    "delete": "Balleessi",
+    "upload": "Olkaa'i",
+    "uploading": "Olkaa'aa jira...",
+    "name": "Maqaa",
+    "type": "Gosa",
+    "file": "Faayilii",
+    "back": "Duubatti",
+    "next": "Itti aanu",
+    "saving": "Kuusaa jira...",
+    "noAccess": "Hayyamni hin jiru",
+    "backToList": "Gara tarree deebi'i",
+    "confirmAndUpdate": "Mirkaneessi fi haaromsi",
+    "confirmAndRegister": "Mirkaneessi fi galmeessi",
+    "reviewAndSubmit": "Ilaali fi ergi",
+    "adminApprovalRequired": "Mirkaneessa bulchaa barbaachisa",
+    "stepOf": "Tarkaanfii {{step}} keessaa {{total}}"
   },
   "header": {
     "searchPlaceholder": "Hojjettoota, kutaa hojii barbaadi..."
@@ -28,5 +46,105 @@
     "systemSettings": "Qindaa'ina Sirnaa",
     "logout": "Ba'i",
     "admin": "Bulchaa"
+  },
+  "dashboard": {
+    "greeting": { "morning": "Akkam bulte", "afternoon": "Akkam oolte", "evening": "Akkam galgaloofte" },
+    "welcome": {
+      "employee": "Ilaalcha waliigalaa daashboordii kee kana",
+      "org": "Har'a dhaabbata keessatti kan ta'aa jiru kana"
+    },
+    "stats": {
+      "totalFacilities": "Dhaabbilee Waliigalaa",
+      "active": "hojii irra jiran",
+      "totalStaff": "Hojjettoota Waliigalaa",
+      "healthStaff": "Hojjettoota dhaabbata fayyaa",
+      "licensesExpiring": "Eeyyamni dhumata jiru (guyyaa 30)",
+      "requireRenewal": "haaromsuu barbaachisa",
+      "leaveBalance": "Haftee hayyamaa",
+      "pendingApprovals": "Mirkaneessa eegaa jiru",
+      "daysAvailable": "guyyaan ni jira",
+      "requireAttention": "xiyyeeffannoo barbaada"
+    },
+    "activities": { "title": "Sochiiwwan Dhihoo", "description": "Fooyya'iinsa dhihoo dhaabbata keessaa" },
+    "events": {
+      "title": "Dhimmoota Itti Aanan",
+      "description": "Guyyoota barbaachisoo kana hin dagatin",
+      "licenseExpiry": "dhumata eeyyamaa",
+      "within30Days": "Guyyaa 30 keessatti"
+    },
+    "loading": { "activities": "Sochii fe'amaa jira...", "events": "Dhimmoota fe'amaa jiran..." },
+    "empty": { "activities": "Sochiin dhihoo hin jiru.", "events": "Dhimmoonni itti aanan hin jiran." },
+    "actions": { "viewAllActivities": "Sochii hunda ilaali", "viewCalendar": "Kaalaandarii ilaali" },
+    "quickActions": {
+      "title": "Gochaalee Saffisaa",
+      "description": "Wantoota yeroo baay'ee fayyadaman",
+      "checkIn": "Galmaa'i",
+      "applyLeave": "Hayyama gaafadhu",
+      "submitExpense": "Baasii galchi",
+      "viewTimesheet": "Gabatee sa'aatii ilaali"
+    }
+  },
+  "facilities": {
+    "title": "Dhaabbilee Fayyaa Magaalaa Chiro",
+    "subtitle": "Dhaabbilee galmeessuu fi bulchuu",
+    "noAccess": "Dhaabbilee ilaaluuf hayyamni hin jiru.",
+    "actions": { "register": "Dhaabbata galmeessi" },
+    "stats": { "total": "Dhaabbilee Waliigalaa", "active": "Hojii irra" },
+    "directory": { "title": "Tarree Dhaabbilee", "description": "Dhaabbilee barbaadi fi calali" },
+    "searchPlaceholder": "Maqaa, galmee, eeyyama, TIN irratti barbaadi...",
+    "filters": { "allStatus": "Haala hunda", "allTypes": "Gosa hunda" },
+    "table": { "name": "Maqaa", "type": "Gosa", "status": "Haala", "contact": "Quunnamtii", "actions": "Tarkaanfii" },
+    "empty": "Dhaabbanni hin argamne.",
+    "delete": { "title": "Dhaabbata balleessi", "confirm": "\"{{name}}\" dhabamsiisuuf mirkaneessaa?" }
+  },
+  "staff": {
+    "title": "Hojjettoota",
+    "subtitle": "Hojjettoota dhaabbata fayyaa galmeessuu fi bulchuu",
+    "noAccess": "Hojjettoota ilaaluuf hayyamni hin jiru.",
+    "actions": { "register": "Hojjetaa galmeessi" },
+    "stats": { "total": "Hojjettoota Waliigalaa", "active": "Hojii irra" },
+    "directory": { "title": "Tarree Hojjettootaa", "description": "Hojjettoota barbaadi fi calali" },
+    "searchPlaceholder": "Maqaa, email, ID irratti barbaadi...",
+    "filters": { "allStatus": "Haala hunda", "allFacilities": "Dhaabbilee hunda" },
+    "table": { "staff": "Hojjetaa", "facility": "Dhaabbata", "department": "Kutaa", "status": "Haala", "contact": "Quunnamtii", "actions": "Tarkaanfii" },
+    "empty": "Hojjetaan hin argamne.",
+    "delete": { "title": "Galmee hojjetaa balleessi", "confirm": "\"{{name}}\" haquuf mirkaneessaa?" }
+  },
+  "facilityProfile": {
+    "noAccess": "Dhaabbata kana ilaaluuf hayyamni hin jiru.",
+    "actions": { "changeStatus": "Haala jijjiiri" },
+    "details": "Ibsa",
+    "staff": "Hojjettoota",
+    "staffAssigned": "Dhaabbata kanaaf ramadaman",
+    "noStaff": "Hojjetaan hin ramadamne.",
+    "documents": "Sanadoota",
+    "facilityDocuments": "Sanadoota dhaabbataa",
+    "noDocumentsAccess": "Sanadoota ilaaluuf hayyamni hin jiru.",
+    "noDocuments": "Sanadni hin olkaa'amne.",
+    "uploadTitle": "Sanada dhaabbataa olkaa'i",
+    "documentNamePlaceholder": "Maqaa sanadaa",
+    "documentTypePlaceholder": "fkn. eeyyama, galmee"
+  },
+  "staffProfile": {
+    "noAccess": "Hojjetaa kana ilaaluuf hayyamni hin jiru.",
+    "actions": { "changeStatus": "Haala jijjiiri", "editRegistration": "Galmee gulaali" },
+    "details": "Ibsa",
+    "documents": "Sanadoota",
+    "staffDocuments": "Sanadoota hojjetaa",
+    "noDocumentsAccess": "Sanadoota ilaaluuf hayyamni hin jiru.",
+    "noDocuments": "Sanadni hin olkaa'amne.",
+    "uploadTitle": "Sanada hojjetaa olkaa'i",
+    "documentNamePlaceholder": "Maqaa sanadaa",
+    "documentTypePlaceholder": "fkn. eeyyama, ragaa"
+  },
+  "facilityRegistration": {
+    "noCreateAccess": "Dhaabbata galmeessuuf hayyamni hin jiru.",
+    "noEditAccess": "Dhaabbata gulaaluuf hayyamni hin jiru.",
+    "editTitle": "Dhaabbata gulaali",
+    "registerTitle": "Dhaabbata galmeessi"
+  },
+  "staffRegistration": {
+    "editTitle": "Hojjetaa gulaali",
+    "registerTitle": "Hojjetaa galmeessi"
   }
 }

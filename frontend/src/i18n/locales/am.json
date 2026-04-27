@@ -3,7 +3,25 @@
     "language": "ቋንቋ",
     "english": "እንግሊዝኛ",
     "amharic": "አማርኛ",
-    "oromo": "ኦሮሞ"
+    "oromo": "ኦሮሞ",
+    "loading": "በመጫን ላይ...",
+    "cancel": "ሰርዝ",
+    "delete": "አጥፋ",
+    "upload": "ጫን",
+    "uploading": "በመጫን ላይ...",
+    "name": "ስም",
+    "type": "አይነት",
+    "file": "ፋይል",
+    "back": "ተመለስ",
+    "next": "ቀጣይ",
+    "saving": "በማስቀመጥ ላይ...",
+    "noAccess": "ፍቃድ የለም",
+    "backToList": "ወደ ዝርዝር ተመለስ",
+    "confirmAndUpdate": "አረጋግጥ እና አዘምን",
+    "confirmAndRegister": "አረጋግጥ እና መዝግብ",
+    "reviewAndSubmit": "አረጋግጥ እና አስገባ",
+    "adminApprovalRequired": "የአስተዳዳሪ ማጽደቅ ያስፈልጋል",
+    "stepOf": "ደረጃ {{step}} / {{total}}"
   },
   "header": {
     "searchPlaceholder": "ሰራተኞችን፣ መምሪያዎችን ፈልግ..."
@@ -28,5 +46,105 @@
     "systemSettings": "የስርዓት ቅንብሮች",
     "logout": "ውጣ",
     "admin": "አስተዳዳሪ"
+  },
+  "dashboard": {
+    "greeting": { "morning": "እንደምን አደሩ", "afternoon": "እንደምን ዋሉ", "evening": "መልካም ምሽት" },
+    "welcome": {
+      "employee": "የእርስዎ ዳሽቦርድ አጠቃላይ እይታ",
+      "org": "ዛሬ በድርጅቱ ውስጥ የሚከሰቱ ነገሮች"
+    },
+    "stats": {
+      "totalFacilities": "ጠቅላላ ተቋማት",
+      "active": "ንቁ",
+      "totalStaff": "ጠቅላላ ሰራተኞች",
+      "healthStaff": "የጤና ተቋም ሰራተኞች",
+      "licensesExpiring": "በ30 ቀን ውስጥ የሚያበቃ ፈቃድ",
+      "requireRenewal": "መታደስ ያስፈልጋል",
+      "leaveBalance": "የፈቃድ ቀሪ",
+      "pendingApprovals": "በመጠባበቅ ላይ ያሉ ማጽደቆች",
+      "daysAvailable": "ቀናት ይገኛሉ",
+      "requireAttention": "ትኩረት ያስፈልጋል"
+    },
+    "activities": { "title": "የቅርብ እንቅስቃሴዎች", "description": "በድርጅቱ ውስጥ የቅርብ ዝማኔዎች" },
+    "events": {
+      "title": "የሚመጡ ክስተቶች",
+      "description": "እነዚህን አስፈላጊ ቀናት አትዘንጉ",
+      "licenseExpiry": "የፈቃድ ማብቂያ",
+      "within30Days": "በ30 ቀን ውስጥ"
+    },
+    "loading": { "activities": "እንቅስቃሴዎችን በመጫን ላይ...", "events": "ክስተቶችን በመጫን ላይ..." },
+    "empty": { "activities": "የቅርብ እንቅስቃሴ የለም።", "events": "የሚመጡ ክስተቶች የሉም።" },
+    "actions": { "viewAllActivities": "ሁሉንም እንቅስቃሴዎች ይመልከቱ", "viewCalendar": "ቀን መቁጠሪያን ይመልከቱ" },
+    "quickActions": {
+      "title": "ፈጣን ተግባራት",
+      "description": "በብዛት የሚጠቀሙት ባህሪያት",
+      "checkIn": "ግባ",
+      "applyLeave": "ፈቃድ ጠይቅ",
+      "submitExpense": "ወጪ አስገባ",
+      "viewTimesheet": "የሰዓት ሰንጠረዥ እይ"
+    }
+  },
+  "facilities": {
+    "title": "የጭሮ ከተማ ጤና ተቋማት",
+    "subtitle": "ተቋማትን መመዝገብ እና ማስተዳደር",
+    "noAccess": "ተቋማትን ለማየት ፍቃድ የለዎትም።",
+    "actions": { "register": "ተቋም መዝግብ" },
+    "stats": { "total": "ጠቅላላ ተቋማት", "active": "ንቁ" },
+    "directory": { "title": "የተቋማት ዝርዝር", "description": "ተቋማትን ፈልግ እና አጣራ" },
+    "searchPlaceholder": "በስም፣ ምዝገባ፣ ፈቃድ፣ TIN ፈልግ...",
+    "filters": { "allStatus": "ሁሉም ሁኔታ", "allTypes": "ሁሉም አይነቶች" },
+    "table": { "name": "ስም", "type": "አይነት", "status": "ሁኔታ", "contact": "እውቂያ", "actions": "እርምጃዎች" },
+    "empty": "ምንም ተቋም አልተገኘም።",
+    "delete": { "title": "ተቋም አጥፋ", "confirm": "\"{{name}}\" እንዲወገድ እርግጠኛ ነዎት?" }
+  },
+  "staff": {
+    "title": "ሰራተኞች",
+    "subtitle": "የጤና ተቋም ሰራተኞችን መመዝገብ እና ማስተዳደር",
+    "noAccess": "ሰራተኞችን ለማየት ፍቃድ የለዎትም።",
+    "actions": { "register": "ሰራተኛ መዝግብ" },
+    "stats": { "total": "ጠቅላላ ሰራተኞች", "active": "ንቁ" },
+    "directory": { "title": "የሰራተኞች ዝርዝር", "description": "ሰራተኞችን ፈልግ እና አጣራ" },
+    "searchPlaceholder": "በስም፣ ኢሜይል፣ መለያ ፈልግ...",
+    "filters": { "allStatus": "ሁሉም ሁኔታ", "allFacilities": "ሁሉም ተቋማት" },
+    "table": { "staff": "ሰራተኛ", "facility": "ተቋም", "department": "ክፍል", "status": "ሁኔታ", "contact": "እውቂያ", "actions": "እርምጃዎች" },
+    "empty": "ምንም ሰራተኛ አልተገኘም።",
+    "delete": { "title": "የሰራተኛ መዝገብ አጥፋ", "confirm": "\"{{name}}\" በቋሚነት ይወገድ?" }
+  },
+  "facilityProfile": {
+    "noAccess": "ይህን ተቋም ለማየት ፍቃድ የለዎትም።",
+    "actions": { "changeStatus": "ሁኔታ ቀይር" },
+    "details": "ዝርዝሮች",
+    "staff": "ሰራተኞች",
+    "staffAssigned": "ለዚህ ተቋም የተመደቡ",
+    "noStaff": "የተመደቡ ሰራተኞች የሉም።",
+    "documents": "ሰነዶች",
+    "facilityDocuments": "የተቋም ሰነዶች",
+    "noDocumentsAccess": "ሰነዶችን ለማየት ፍቃድ የለም።",
+    "noDocuments": "ሰነዶች አልተጫኑም።",
+    "uploadTitle": "የተቋም ሰነድ ጫን",
+    "documentNamePlaceholder": "የሰነድ ስም",
+    "documentTypePlaceholder": "ለምሳሌ፡ ፈቃድ፣ ምዝገባ"
+  },
+  "staffProfile": {
+    "noAccess": "ይህን ሰራተኛ ለማየት ፍቃድ የለዎትም።",
+    "actions": { "changeStatus": "ሁኔታ ቀይር", "editRegistration": "ምዝገባ አርትዕ" },
+    "details": "ዝርዝሮች",
+    "documents": "ሰነዶች",
+    "staffDocuments": "የሰራተኛ ሰነዶች",
+    "noDocumentsAccess": "ሰነዶችን ለማየት ፍቃድ የለም።",
+    "noDocuments": "ሰነዶች አልተጫኑም።",
+    "uploadTitle": "የሰራተኛ ሰነድ ጫን",
+    "documentNamePlaceholder": "የሰነድ ስም",
+    "documentTypePlaceholder": "ለምሳሌ፡ ፈቃድ፣ ሰርተፍኬት"
+  },
+  "facilityRegistration": {
+    "noCreateAccess": "ተቋም ለመመዝገብ ፍቃድ የለዎትም።",
+    "noEditAccess": "ተቋም ለማርትዕ ፍቃድ የለዎትም።",
+    "editTitle": "ተቋም አርትዕ",
+    "registerTitle": "ተቋም መዝግብ"
+  },
+  "staffRegistration": {
+    "editTitle": "ሰራተኛ አርትዕ",
+    "registerTitle": "ሰራተኛ መዝግብ"
   }
 }

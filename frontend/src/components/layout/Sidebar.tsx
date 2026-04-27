@@ -214,7 +214,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
           </div>
           {!isCollapsed &&
           <div data-id="vhsmmnm2b" data-path="src/components/layout/Sidebar.tsx">
-              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100" data-id="00zu1xik0" data-path="src/components/layout/Sidebar.tsx">HRMS</h1>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100" data-id="00zu1xik0" data-path="src/components/layout/Sidebar.tsx">Health Sector</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400" data-id="fix24iosm" data-path="src/components/layout/Sidebar.tsx">Portal</p>
             </div>
           }

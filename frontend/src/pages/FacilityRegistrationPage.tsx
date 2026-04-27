@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -129,6 +130,7 @@ function buildPayload(form: FormState): CreateFacilityDto {
 const OFFICER_FACILITY_STATUSES = ['DRAFT', 'PENDING', 'SUBMITTED'] as const;
 
 export default function FacilityRegistrationPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission, user } = useAuth();
@@ -307,18 +309,18 @@ export default function FacilityRegistrationPage() {
   if (!isEdit && !canCreate) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
-        <p className="font-medium">No access</p>
-        <p className="text-sm mt-1">You don&apos;t have permission to register facilities.</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/facilities')}>Back to list</Button>
+        <p className="font-medium">{t('common.noAccess')}</p>
+        <p className="text-sm mt-1">{t('facilityRegistration.noCreateAccess')}</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/facilities')}>{t('common.backToList')}</Button>
       </div>
     );
   }
   if (isEdit && !canUpdate) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
-        <p className="font-medium">No access</p>
-        <p className="text-sm mt-1">You don&apos;t have permission to edit facilities.</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/facilities')}>Back to list</Button>
+        <p className="font-medium">{t('common.noAccess')}</p>
+        <p className="text-sm mt-1">{t('facilityRegistration.noEditAccess')}</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/facilities')}>{t('common.backToList')}</Button>
       </div>
     );
   }
@@ -339,16 +341,16 @@ export default function FacilityRegistrationPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {isEdit ? 'Edit Facility' : 'Register Facility'}
+            {isEdit ? t('facilityRegistration.editTitle') : t('facilityRegistration.registerTitle')}
           </h1>
-          <p className="text-gray-600 text-sm mt-0.5">Step {step} of {totalSteps}</p>
+          <p className="text-gray-600 text-sm mt-0.5">{t('common.stepOf', { step, total: totalSteps })}</p>
         </div>
       </div>
 
       {!isEdit && isOfficer && (
         <Alert className="border-blue-200 bg-blue-50/80">
           <Info className="h-4 w-4 text-blue-600" />
-          <AlertTitle className="text-blue-900">Admin approval required</AlertTitle>
+          <AlertTitle className="text-blue-900">{t('common.adminApprovalRequired')}</AlertTitle>
           <AlertDescription className="text-blue-800">
             When you finish registration, the system sets status to <strong>SUBMITTED</strong> and approval to{' '}
             <strong>PENDING</strong>. An administrator will approve and assign the final status (e.g. APPROVED or ACTIVE).
@@ -388,7 +390,7 @@ export default function FacilityRegistrationPage() {
       {/* Step content */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">{wizardSteps[step - 1]?.title ?? 'Review & submit'}</CardTitle>
+          <CardTitle className="text-lg">{wizardSteps[step - 1]?.title ?? t('common.reviewAndSubmit')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {step === 1 && (
@@ -612,16 +614,16 @@ export default function FacilityRegistrationPage() {
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t('common.back')}
         </Button>
         {!isLastStep ? (
           <Button onClick={() => setStep((s) => Math.min(totalSteps, s + 1))}>
-            Next
+            {t('common.next')}
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : isEdit ? 'Confirm & update' : 'Confirm & register'}
+            {loading ? t('common.saving') : isEdit ? t('common.confirmAndUpdate') : t('common.confirmAndRegister')}
           </Button>
         )}
       </div>

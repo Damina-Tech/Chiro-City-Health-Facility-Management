@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,6 +66,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function FacilitiesPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -156,7 +158,7 @@ export default function FacilitiesPage() {
       <div className="space-y-6">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
           <p className="font-medium">No access</p>
-          <p className="text-sm mt-1">You don&apos;t have permission to view facilities.</p>
+          <p className="text-sm mt-1">{t('facilities.noAccess')}</p>
         </div>
       </div>
     );
@@ -166,13 +168,13 @@ export default function FacilitiesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Chiro City Health Facilities</h1>
-          <p className="text-gray-600 mt-1">Register and manage facilities</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('facilities.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('facilities.subtitle')}</p>
         </div>
         {canCreate && (
           <Button onClick={() => navigate('/facilities/register')}>
             <Plus className="h-4 w-4 mr-2" />
-            Register Facility
+            {t('facilities.actions.register')}
           </Button>
         )}
       </div>
@@ -182,7 +184,7 @@ export default function FacilitiesPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Facilities</p>
+                <p className="text-sm font-medium text-gray-600">{t('facilities.stats.total')}</p>
                 <p className="text-2xl font-bold">{facilities.length}</p>
               </div>
               <Building2 className="h-8 w-8 text-blue-600" />
@@ -193,7 +195,7 @@ export default function FacilitiesPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-sm font-medium text-gray-600">{t('facilities.stats.active')}</p>
                 <p className="text-2xl font-bold">
                   {facilities.filter((f) => f.status === 'ACTIVE').length}
                 </p>
@@ -205,15 +207,15 @@ export default function FacilitiesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Facility Directory</CardTitle>
-          <CardDescription>Search and filter facilities</CardDescription>
+          <CardTitle>{t('facilities.directory.title')}</CardTitle>
+          <CardDescription>{t('facilities.directory.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name, registration, license, TIN..."
+                placeholder={t('facilities.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -224,7 +226,7 @@ export default function FacilitiesPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">{t('facilities.filters.allStatus')}</SelectItem>
                 {STATUS_OPTIONS.map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
@@ -235,7 +237,7 @@ export default function FacilitiesPage() {
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="all">{t('facilities.filters.allTypes')}</SelectItem>
                 {FACILITY_TYPES.map((t) => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                 ))}
@@ -244,17 +246,17 @@ export default function FacilitiesPage() {
           </div>
 
           {loading ? (
-            <div className="py-8 text-center text-gray-500">Loading...</div>
+            <div className="py-8 text-center text-gray-500">{t('common.loading')}</div>
           ) : (
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('facilities.table.name')}</TableHead>
+                    <TableHead>{t('facilities.table.type')}</TableHead>
+                    <TableHead>{t('facilities.table.status')}</TableHead>
+                    <TableHead>{t('facilities.table.contact')}</TableHead>
+                    <TableHead>{t('facilities.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -339,7 +341,7 @@ export default function FacilitiesPage() {
             </div>
           )}
           {!loading && facilities.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No facilities found.</div>
+            <div className="text-center py-8 text-gray-500">{t('facilities.empty')}</div>
           )}
         </CardContent>
       </Card>
@@ -347,18 +349,18 @@ export default function FacilitiesPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete facility</AlertDialogTitle>
+            <AlertDialogTitle>{t('facilities.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{facilityToDelete?.name}&quot;? This action cannot be undone.
+              {t('facilities.delete.confirm', { name: facilityToDelete?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
             >
-              Delete
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

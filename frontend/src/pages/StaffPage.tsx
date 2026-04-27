@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +51,7 @@ import {
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'TERMINATED'];
 
 export default function StaffPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -141,7 +143,7 @@ export default function StaffPage() {
       <div className="space-y-6">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-800">
           <p className="font-medium">No access</p>
-          <p className="text-sm mt-1">You don&apos;t have permission to view staff.</p>
+          <p className="text-sm mt-1">{t('staff.noAccess')}</p>
         </div>
       </div>
     );
@@ -151,13 +153,13 @@ export default function StaffPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Staff</h1>
-          <p className="text-gray-600 mt-1">Register and manage health facility staff</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('staff.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('staff.subtitle')}</p>
         </div>
         {canCreate && (
           <Button onClick={() => navigate('/staff/register')}>
             <Plus className="h-4 w-4 mr-2" />
-            Register staff
+            {t('staff.actions.register')}
           </Button>
         )}
       </div>
@@ -167,7 +169,7 @@ export default function StaffPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                <p className="text-sm font-medium text-gray-600">{t('staff.stats.total')}</p>
                 <p className="text-2xl font-bold">{staff.length}</p>
               </div>
               <Users className="h-8 w-8 text-blue-600" />
@@ -178,7 +180,7 @@ export default function StaffPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-sm font-medium text-gray-600">{t('staff.stats.active')}</p>
                 <p className="text-2xl font-bold">
                   {staff.filter((s) => s.status === 'ACTIVE').length}
                 </p>
@@ -190,15 +192,15 @@ export default function StaffPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Staff Directory</CardTitle>
-          <CardDescription>Search and filter staff</CardDescription>
+          <CardTitle>{t('staff.directory.title')}</CardTitle>
+          <CardDescription>{t('staff.directory.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name, email, staff ID, national ID..."
+                placeholder={t('staff.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -209,7 +211,7 @@ export default function StaffPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">{t('staff.filters.allStatus')}</SelectItem>
                 {STATUS_OPTIONS.map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
@@ -220,7 +222,7 @@ export default function StaffPage() {
                 <SelectValue placeholder="Facility" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Facilities</SelectItem>
+                <SelectItem value="all">{t('staff.filters.allFacilities')}</SelectItem>
                 {facilities.map((f) => (
                   <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                 ))}
@@ -229,18 +231,18 @@ export default function StaffPage() {
           </div>
 
           {loading ? (
-            <div className="py-8 text-center text-gray-500">Loading...</div>
+            <div className="py-8 text-center text-gray-500">{t('common.loading')}</div>
           ) : (
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Staff</TableHead>
-                    <TableHead>Facility</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('staff.table.staff')}</TableHead>
+                    <TableHead>{t('staff.table.facility')}</TableHead>
+                    <TableHead>{t('staff.table.department')}</TableHead>
+                    <TableHead>{t('staff.table.status')}</TableHead>
+                    <TableHead>{t('staff.table.contact')}</TableHead>
+                    <TableHead>{t('staff.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -339,7 +341,7 @@ export default function StaffPage() {
             </div>
           )}
           {!loading && staff.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No staff found.</div>
+            <div className="text-center py-8 text-gray-500">{t('staff.empty')}</div>
           )}
         </CardContent>
       </Card>
@@ -358,18 +360,18 @@ export default function StaffPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete staff record</AlertDialogTitle>
+            <AlertDialogTitle>{t('staff.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Permanently remove &quot;{staffToDelete?.name}&quot;? This action cannot be undone.
+              {t('staff.delete.confirm', { name: staffToDelete?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setStaffToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setStaffToDelete(null)}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => void handleConfirmDeleteStaff()}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
             >
-              Delete
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

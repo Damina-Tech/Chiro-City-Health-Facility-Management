@@ -1,112 +1,95 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { dashboardApi } from '@/services/api';
+import { dashboardApi, notificationsApi, staffApi, type Notification, type Staff } from '@/services/api';
 import {
   Users,
   Clock,
   DollarSign,
   Calendar,
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
-  CheckCircle,
   MapPin,
   FileText,
   Building2,
 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
   const [healthStats, setHealthStats] = useState<{
     totalFacilities: number;
     totalStaff: number;
     activeFacilities: number;
     licenseExpiringCount: number;
   } | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [expiringStaff, setExpiringStaff] = useState<Staff[]>([]);
 
   useEffect(() => {
-    dashboardApi.getStats().then(setHealthStats).catch(() => setHealthStats(null));
+    setIsLoading(true);
+    Promise.allSettled([
+      dashboardApi.getStats(),
+      notificationsApi.list({ limit: 6 }),
+      staffApi.licenseExpiring(30),
+    ])
+      .then(([statsRes, notificationsRes, expiringRes]) => {
+        if (statsRes.status === 'fulfilled') {
+          setHealthStats(statsRes.value);
+        } else {
+          setHealthStats(null);
+        }
+        if (notificationsRes.status === 'fulfilled') {
+          setNotifications(notificationsRes.value);
+        } else {
+          setNotifications([]);
+        }
+        if (expiringRes.status === 'fulfilled') {
+          setExpiringStaff(expiringRes.value);
+        } else {
+          setExpiringStaff([]);
+        }
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
-  // Health system stats (primary)
-  const stats = {
+  const stats = useMemo(() => ({
     totalFacilities: healthStats?.totalFacilities ?? 0,
     totalStaff: healthStats?.totalStaff ?? 0,
     activeFacilities: healthStats?.activeFacilities ?? 0,
     licenseExpiringCount: healthStats?.licenseExpiringCount ?? 0,
-    totalEmployees: 156,
-    presentToday: 142,
-    onLeave: 8,
-    pendingApprovals: 12,
-    monthlyPayroll: 450000,
-    avgWorkHours: 8.2,
-    leaveBalance: user?.role === 'employee' ? 15 : null
-  };
+    pendingApprovals: Math.max((statsFromList(notifications, 'FACILITY_PENDING') || 0), 0),
+    leaveBalance: user?.role === 'employee' ? 15 : null,
+  }), [healthStats, notifications, user?.role]);
 
-  const recentActivities = [
-  {
-    id: 1,
-    type: 'leave',
-    message: 'Alice Employee applied for vacation leave',
-    time: '10 minutes ago',
-    status: 'pending'
-  },
-  {
-    id: 2,
-    type: 'attendance',
-    message: 'Mike Manager checked in at Office',
-    time: '25 minutes ago',
-    status: 'success'
-  },
-  {
-    id: 3,
-    type: 'payroll',
-    message: 'November payroll processing completed',
-    time: '2 hours ago',
-    status: 'success'
-  },
-  {
-    id: 4,
-    type: 'expense',
-    message: 'Emma Designer submitted travel expense',
-    time: '3 hours ago',
-    status: 'pending'
-  }];
+  const recentActivities = useMemo(() => {
+    return notifications.slice(0, 5).map((n) => ({
+      id: n.id,
+      type: n.type,
+      message: n.message,
+      time: relativeTime(n.createdAt),
+      status: n.readAt ? 'success' : 'pending',
+    }));
+  }, [notifications]);
 
-
-  const upcomingEvents = [
-  {
-    id: 1,
-    title: 'Team Meeting',
-    date: '2024-12-15',
-    time: '10:00 AM',
-    type: 'meeting'
-  },
-  {
-    id: 2,
-    title: 'John Admin Birthday',
-    date: '2024-12-16',
-    time: 'All Day',
-    type: 'birthday'
-  },
-  {
-    id: 3,
-    title: 'Payroll Processing',
-    date: '2024-12-20',
-    time: '2:00 PM',
-    type: 'payroll'
-  }];
-
+  const upcomingEvents = useMemo(() => {
+    return expiringStaff.slice(0, 5).map((staff) => ({
+      id: staff.id,
+      title: `${staff.name} ${t('dashboard.events.licenseExpiry')}`,
+      date: staff.licenseExpiry ? new Date(staff.licenseExpiry).toLocaleDateString() : 'N/A',
+      time: t('dashboard.events.within30Days'),
+      type: 'license',
+    }));
+  }, [expiringStaff, t]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return t('dashboard.greeting.morning');
+    if (hour < 18) return t('dashboard.greeting.afternoon');
+    return t('dashboard.greeting.evening');
   };
 
   return (
@@ -117,10 +100,9 @@ const Dashboard: React.FC = () => {
           {getGreeting()}, {user?.name}!
         </h1>
         <p className="text-blue-100" data-id="527991n9l" data-path="src/pages/Dashboard.tsx">
-          {user?.role === 'employee' ?
-          "Here's your personal dashboard overview" :
-          "Here's what's happening in your organization today"
-          }
+            {user?.role === 'employee'
+              ? t('dashboard.welcome.employee')
+              : t('dashboard.welcome.org')}
         </p>
       </div>
 
@@ -128,39 +110,39 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-id="rt6xji74s" data-path="src/pages/Dashboard.tsx">
         <Card data-id="z5sk2g3mz" data-path="src/pages/Dashboard.tsx">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2" data-id="q3bsqw0t0" data-path="src/pages/Dashboard.tsx">
-            <CardTitle className="text-sm font-medium" data-id="gz9hci4x6" data-path="src/pages/Dashboard.tsx">Total Facilities</CardTitle>
+            <CardTitle className="text-sm font-medium" data-id="gz9hci4x6" data-path="src/pages/Dashboard.tsx">{t('dashboard.stats.totalFacilities')}</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" data-id="e6buw4uxd" data-path="src/pages/Dashboard.tsx" />
           </CardHeader>
           <CardContent data-id="m5witi60n" data-path="src/pages/Dashboard.tsx">
             <div className="text-2xl font-bold" data-id="th7y8y4ql" data-path="src/pages/Dashboard.tsx">{stats.totalFacilities}</div>
             <p className="text-xs text-muted-foreground" data-id="5m7auliim" data-path="src/pages/Dashboard.tsx">
-              {stats.activeFacilities} active
+              {stats.activeFacilities} {t('dashboard.stats.active')}
             </p>
           </CardContent>
         </Card>
 
         <Card data-id="bc1fqbsbv" data-path="src/pages/Dashboard.tsx">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2" data-id="af1lf94wx" data-path="src/pages/Dashboard.tsx">
-            <CardTitle className="text-sm font-medium" data-id="g95gm50ds" data-path="src/pages/Dashboard.tsx">Total Staff</CardTitle>
+            <CardTitle className="text-sm font-medium" data-id="g95gm50ds" data-path="src/pages/Dashboard.tsx">{t('dashboard.stats.totalStaff')}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" data-id="vxgvky7kf" data-path="src/pages/Dashboard.tsx" />
           </CardHeader>
           <CardContent data-id="nr73id1x3" data-path="src/pages/Dashboard.tsx">
             <div className="text-2xl font-bold" data-id="icjqp6yuj" data-path="src/pages/Dashboard.tsx">{stats.totalStaff}</div>
             <p className="text-xs text-muted-foreground" data-id="q3rilffp2" data-path="src/pages/Dashboard.tsx">
-              Health facility staff
+              {t('dashboard.stats.healthStaff')}
             </p>
           </CardContent>
         </Card>
 
         <Card data-id="kqf5giwrb" data-path="src/pages/Dashboard.tsx">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2" data-id="5v6wscbs8" data-path="src/pages/Dashboard.tsx">
-            <CardTitle className="text-sm font-medium" data-id="fmi5zuw8q" data-path="src/pages/Dashboard.tsx">Licenses Expiring (30d)</CardTitle>
+            <CardTitle className="text-sm font-medium" data-id="fmi5zuw8q" data-path="src/pages/Dashboard.tsx">{t('dashboard.stats.licensesExpiring')}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" data-id="t52zzd4uh" data-path="src/pages/Dashboard.tsx" />
           </CardHeader>
           <CardContent data-id="n2jaf5od9" data-path="src/pages/Dashboard.tsx">
             <div className="text-2xl font-bold" data-id="ket0vrqbr" data-path="src/pages/Dashboard.tsx">{stats.licenseExpiringCount}</div>
             <p className="text-xs text-muted-foreground" data-id="g4ec8nurf" data-path="src/pages/Dashboard.tsx">
-              Require renewal
+              {t('dashboard.stats.requireRenewal')}
             </p>
           </CardContent>
         </Card>
@@ -168,7 +150,7 @@ const Dashboard: React.FC = () => {
         <Card data-id="gzz7to370" data-path="src/pages/Dashboard.tsx">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2" data-id="dx6798m7o" data-path="src/pages/Dashboard.tsx">
             <CardTitle className="text-sm font-medium" data-id="m66m8f8u7" data-path="src/pages/Dashboard.tsx">
-              {user?.role === 'employee' ? 'Leave Balance' : 'Pending Approvals'}
+              {user?.role === 'employee' ? t('dashboard.stats.leaveBalance') : t('dashboard.stats.pendingApprovals')}
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" data-id="x0f35vcjh" data-path="src/pages/Dashboard.tsx" />
           </CardHeader>
@@ -177,7 +159,7 @@ const Dashboard: React.FC = () => {
               {user?.role === 'employee' ? stats.leaveBalance : stats.pendingApprovals}
             </div>
             <p className="text-xs text-muted-foreground" data-id="4hflcllo6" data-path="src/pages/Dashboard.tsx">
-              {user?.role === 'employee' ? 'days available' : 'require attention'}
+              {user?.role === 'employee' ? t('dashboard.stats.daysAvailable') : t('dashboard.stats.requireAttention')}
             </p>
           </CardContent>
         </Card>
@@ -187,13 +169,17 @@ const Dashboard: React.FC = () => {
         {/* Recent Activities */}
         <Card data-id="a7bkyg03f" data-path="src/pages/Dashboard.tsx">
           <CardHeader data-id="suw1rsq7e" data-path="src/pages/Dashboard.tsx">
-            <CardTitle data-id="abgzy940m" data-path="src/pages/Dashboard.tsx">Recent Activities</CardTitle>
-            <CardDescription data-id="lyv8uprk3" data-path="src/pages/Dashboard.tsx">Latest updates across the organization</CardDescription>
+            <CardTitle data-id="abgzy940m" data-path="src/pages/Dashboard.tsx">{t('dashboard.activities.title')}</CardTitle>
+            <CardDescription data-id="lyv8uprk3" data-path="src/pages/Dashboard.tsx">{t('dashboard.activities.description')}</CardDescription>
           </CardHeader>
           <CardContent data-id="u54wrz1jo" data-path="src/pages/Dashboard.tsx">
             <div className="space-y-4" data-id="4mdxan87z" data-path="src/pages/Dashboard.tsx">
-              {recentActivities.map((activity) =>
-              <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors" data-id="7djpb671h" data-path="src/pages/Dashboard.tsx">
+              {isLoading && <p className="text-sm text-gray-500">{t('dashboard.loading.activities')}</p>}
+              {!isLoading && recentActivities.length === 0 && (
+                <p className="text-sm text-gray-500">{t('dashboard.empty.activities')}</p>
+              )}
+              {recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors" data-id="7djpb671h" data-path="src/pages/Dashboard.tsx">
                   <div className={`h-2 w-2 rounded-full mt-2 ${
                 activity.status === 'success' ? 'bg-green-500' :
                 activity.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'}`
@@ -211,10 +197,10 @@ const Dashboard: React.FC = () => {
                     {activity.status}
                   </Badge>
                 </div>
-              )}
+              ))}
             </div>
             <Button variant="outline" className="w-full mt-4" data-id="u9b4f2pum" data-path="src/pages/Dashboard.tsx">
-              View All Activities
+              {t('dashboard.actions.viewAllActivities')}
             </Button>
           </CardContent>
         </Card>
@@ -222,21 +208,23 @@ const Dashboard: React.FC = () => {
         {/* Upcoming Events */}
         <Card data-id="f86xw1i00" data-path="src/pages/Dashboard.tsx">
           <CardHeader data-id="1461gmddw" data-path="src/pages/Dashboard.tsx">
-            <CardTitle data-id="6q678rmdo" data-path="src/pages/Dashboard.tsx">Upcoming Events</CardTitle>
-            <CardDescription data-id="igkok7l4k" data-path="src/pages/Dashboard.tsx">Don't miss these important dates</CardDescription>
+            <CardTitle data-id="6q678rmdo" data-path="src/pages/Dashboard.tsx">{t('dashboard.events.title')}</CardTitle>
+            <CardDescription data-id="igkok7l4k" data-path="src/pages/Dashboard.tsx">{t('dashboard.events.description')}</CardDescription>
           </CardHeader>
           <CardContent data-id="6szy1kv00" data-path="src/pages/Dashboard.tsx">
             <div className="space-y-4" data-id="xum5xrliv" data-path="src/pages/Dashboard.tsx">
-              {upcomingEvents.map((event) =>
-              <div key={event.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors" data-id="rwexdx3p2" data-path="src/pages/Dashboard.tsx">
+              {isLoading && <p className="text-sm text-gray-500">{t('dashboard.loading.events')}</p>}
+              {!isLoading && upcomingEvents.length === 0 && (
+                <p className="text-sm text-gray-500">{t('dashboard.empty.events')}</p>
+              )}
+              {upcomingEvents.map((event) => (
+                <div key={event.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors" data-id="rwexdx3p2" data-path="src/pages/Dashboard.tsx">
                   <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                event.type === 'meeting' ? 'bg-blue-100 text-blue-600' :
-                event.type === 'birthday' ? 'bg-pink-100 text-pink-600' :
-                'bg-green-100 text-green-600'}`
+                    event.type === 'license' ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}`
                 } data-id="3oydhofom" data-path="src/pages/Dashboard.tsx">
-                    {event.type === 'meeting' ? <Users className="h-5 w-5" data-id="r9cry2wvi" data-path="src/pages/Dashboard.tsx" /> :
-                  event.type === 'birthday' ? <Calendar className="h-5 w-5" data-id="6vpxvtvuu" data-path="src/pages/Dashboard.tsx" /> :
-                  <DollarSign className="h-5 w-5" data-id="0vjxps1it" data-path="src/pages/Dashboard.tsx" />}
+                    {event.type === 'license'
+                      ? <AlertTriangle className="h-5 w-5" data-id="r9cry2wvi" data-path="src/pages/Dashboard.tsx" />
+                      : <Calendar className="h-5 w-5" data-id="6vpxvtvuu" data-path="src/pages/Dashboard.tsx" />}
                   </div>
                   <div className="flex-1 min-w-0" data-id="mymzu6csp" data-path="src/pages/Dashboard.tsx">
                     <p className="text-sm font-medium text-gray-900" data-id="48nivtzpy" data-path="src/pages/Dashboard.tsx">
@@ -247,10 +235,10 @@ const Dashboard: React.FC = () => {
                     </p>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
             <Button variant="outline" className="w-full mt-4" data-id="rh7ppxkfu" data-path="src/pages/Dashboard.tsx">
-              View Calendar
+              {t('dashboard.actions.viewCalendar')}
             </Button>
           </CardContent>
         </Card>
@@ -260,26 +248,26 @@ const Dashboard: React.FC = () => {
       {user?.role === 'employee' &&
       <Card data-id="0oa99gnre" data-path="src/pages/Dashboard.tsx">
           <CardHeader data-id="p1p7bz25y" data-path="src/pages/Dashboard.tsx">
-            <CardTitle data-id="179lzra58" data-path="src/pages/Dashboard.tsx">Quick Actions</CardTitle>
-            <CardDescription data-id="j7nx9jdk0" data-path="src/pages/Dashboard.tsx">Frequently used features</CardDescription>
+            <CardTitle data-id="179lzra58" data-path="src/pages/Dashboard.tsx">{t('dashboard.quickActions.title')}</CardTitle>
+            <CardDescription data-id="j7nx9jdk0" data-path="src/pages/Dashboard.tsx">{t('dashboard.quickActions.description')}</CardDescription>
           </CardHeader>
           <CardContent data-id="g4utudig2" data-path="src/pages/Dashboard.tsx">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-id="0q86qit97" data-path="src/pages/Dashboard.tsx">
               <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2" data-id="4et77xwo2" data-path="src/pages/Dashboard.tsx">
                 <MapPin className="h-6 w-6" data-id="rcq0rlrg1" data-path="src/pages/Dashboard.tsx" />
-                <span className="text-sm" data-id="aligl315d" data-path="src/pages/Dashboard.tsx">Check In</span>
+                <span className="text-sm" data-id="aligl315d" data-path="src/pages/Dashboard.tsx">{t('dashboard.quickActions.checkIn')}</span>
               </Button>
               <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2" data-id="r8g3lqzg0" data-path="src/pages/Dashboard.tsx">
                 <Calendar className="h-6 w-6" data-id="jopeqi5gc" data-path="src/pages/Dashboard.tsx" />
-                <span className="text-sm" data-id="nv1euyrkx" data-path="src/pages/Dashboard.tsx">Apply Leave</span>
+                <span className="text-sm" data-id="nv1euyrkx" data-path="src/pages/Dashboard.tsx">{t('dashboard.quickActions.applyLeave')}</span>
               </Button>
               <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2" data-id="80v8o19k7" data-path="src/pages/Dashboard.tsx">
                 <FileText className="h-6 w-6" data-id="zgzravntl" data-path="src/pages/Dashboard.tsx" />
-                <span className="text-sm" data-id="rbmz7ucmq" data-path="src/pages/Dashboard.tsx">Submit Expense</span>
+                <span className="text-sm" data-id="rbmz7ucmq" data-path="src/pages/Dashboard.tsx">{t('dashboard.quickActions.submitExpense')}</span>
               </Button>
               <Button variant="outline" className="h-20 flex flex-col items-center justify-center space-y-2" data-id="whnrp1dvo" data-path="src/pages/Dashboard.tsx">
                 <Clock className="h-6 w-6" data-id="cz8jva6n3" data-path="src/pages/Dashboard.tsx" />
-                <span className="text-sm" data-id="fjjhv4s9f" data-path="src/pages/Dashboard.tsx">View Timesheet</span>
+                <span className="text-sm" data-id="fjjhv4s9f" data-path="src/pages/Dashboard.tsx">{t('dashboard.quickActions.viewTimesheet')}</span>
               </Button>
             </div>
           </CardContent>
@@ -290,3 +278,22 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+
+function relativeTime(isoDate: string): string {
+  const now = Date.now();
+  const time = new Date(isoDate).getTime();
+  const diffMinutes = Math.floor((now - time) / 60000);
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+}
+
+function statsFromList(items: Notification[], type: string): number {
+  return items.filter((item) => item.type === type && !item.readAt).length;
+}

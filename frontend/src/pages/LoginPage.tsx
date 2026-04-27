@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
         }
         toast({
           title: "Login Successful",
-          description: "Welcome to the HRMS dashboard!"
+          description: "Welcome to the Health Sector dashboard!"
         });
         navigate(firstAccessiblePathFromPermissions(perms));
       } else {

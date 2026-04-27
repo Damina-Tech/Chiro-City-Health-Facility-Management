@@ -3,7 +3,25 @@
     "language": "Language",
     "english": "English",
     "amharic": "Amharic",
-    "oromo": "Oromo"
+    "oromo": "Oromo",
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "name": "Name",
+    "type": "Type",
+    "file": "File",
+    "back": "Back",
+    "next": "Next",
+    "saving": "Saving...",
+    "noAccess": "No access",
+    "backToList": "Back to list",
+    "confirmAndUpdate": "Confirm & update",
+    "confirmAndRegister": "Confirm & register",
+    "reviewAndSubmit": "Review & submit",
+    "adminApprovalRequired": "Admin approval required",
+    "stepOf": "Step {{step}} of {{total}}"
   },
   "header": {
     "searchPlaceholder": "Search employees, departments..."
@@ -28,5 +46,127 @@
     "systemSettings": "System Settings",
     "logout": "Logout",
     "admin": "Admin"
+  },
+  "dashboard": {
+    "greeting": {
+      "morning": "Good Morning",
+      "afternoon": "Good Afternoon",
+      "evening": "Good Evening"
+    },
+    "welcome": {
+      "employee": "Here's your personal dashboard overview",
+      "org": "Here's what's happening in your organization today"
+    },
+    "stats": {
+      "totalFacilities": "Total Facilities",
+      "active": "active",
+      "totalStaff": "Total Staff",
+      "healthStaff": "Health facility staff",
+      "licensesExpiring": "Licenses Expiring (30d)",
+      "requireRenewal": "Require renewal",
+      "leaveBalance": "Leave Balance",
+      "pendingApprovals": "Pending Approvals",
+      "daysAvailable": "days available",
+      "requireAttention": "require attention"
+    },
+    "activities": {
+      "title": "Recent Activities",
+      "description": "Latest updates across the organization"
+    },
+    "events": {
+      "title": "Upcoming Events",
+      "description": "Don't miss these important dates",
+      "licenseExpiry": "license expiry",
+      "within30Days": "Within 30 days"
+    },
+    "loading": {
+      "activities": "Loading activities...",
+      "events": "Loading events..."
+    },
+    "empty": {
+      "activities": "No recent activities.",
+      "events": "No upcoming events."
+    },
+    "actions": {
+      "viewAllActivities": "View All Activities",
+      "viewCalendar": "View Calendar"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "description": "Frequently used features",
+      "checkIn": "Check In",
+      "applyLeave": "Apply Leave",
+      "submitExpense": "Submit Expense",
+      "viewTimesheet": "View Timesheet"
+    }
+  },
+  "facilities": {
+    "title": "Chiro City Health Facilities",
+    "subtitle": "Register and manage facilities",
+    "noAccess": "You don't have permission to view facilities.",
+    "actions": { "register": "Register Facility" },
+    "stats": { "total": "Total Facilities", "active": "Active" },
+    "directory": { "title": "Facility Directory", "description": "Search and filter facilities" },
+    "searchPlaceholder": "Search by name, registration, license, TIN...",
+    "filters": { "allStatus": "All Status", "allTypes": "All Types" },
+    "table": { "name": "Name", "type": "Type", "status": "Status", "contact": "Contact", "actions": "Actions" },
+    "empty": "No facilities found.",
+    "delete": {
+      "title": "Delete facility",
+      "confirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+    }
+  },
+  "staff": {
+    "title": "Staff",
+    "subtitle": "Register and manage health facility staff",
+    "noAccess": "You don't have permission to view staff.",
+    "actions": { "register": "Register staff" },
+    "stats": { "total": "Total Staff", "active": "Active" },
+    "directory": { "title": "Staff Directory", "description": "Search and filter staff" },
+    "searchPlaceholder": "Search by name, email, staff ID, national ID...",
+    "filters": { "allStatus": "All Status", "allFacilities": "All Facilities" },
+    "table": { "staff": "Staff", "facility": "Facility", "department": "Department", "status": "Status", "contact": "Contact", "actions": "Actions" },
+    "empty": "No staff found.",
+    "delete": {
+      "title": "Delete staff record",
+      "confirm": "Permanently remove \"{{name}}\"? This action cannot be undone."
+    }
+  },
+  "facilityProfile": {
+    "noAccess": "You don't have permission to view this facility.",
+    "actions": { "changeStatus": "Change status" },
+    "details": "Details",
+    "staff": "Staff",
+    "staffAssigned": "Assigned to this facility",
+    "noStaff": "No staff assigned.",
+    "documents": "Documents",
+    "facilityDocuments": "Facility documents",
+    "noDocumentsAccess": "No access to documents.",
+    "noDocuments": "No documents uploaded.",
+    "uploadTitle": "Upload Facility Document",
+    "documentNamePlaceholder": "Document name",
+    "documentTypePlaceholder": "e.g. license, registration"
+  },
+  "staffProfile": {
+    "noAccess": "You don't have permission to view this staff member.",
+    "actions": { "changeStatus": "Change status", "editRegistration": "Edit registration" },
+    "details": "Details",
+    "documents": "Documents",
+    "staffDocuments": "Staff documents",
+    "noDocumentsAccess": "No access to documents.",
+    "noDocuments": "No documents uploaded.",
+    "uploadTitle": "Upload Staff Document",
+    "documentNamePlaceholder": "Document name",
+    "documentTypePlaceholder": "e.g. license, certificate"
+  },
+  "facilityRegistration": {
+    "noCreateAccess": "You don't have permission to register facilities.",
+    "noEditAccess": "You don't have permission to edit facilities.",
+    "editTitle": "Edit Facility",
+    "registerTitle": "Register Facility"
+  },
+  "staffRegistration": {
+    "editTitle": "Edit staff",
+    "registerTitle": "Register staff"
   }
 }
