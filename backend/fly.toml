@@ -1,1 +1,23 @@
-app = "backend-white-cherry-9565"
+# fly.toml app configuration file generated for chiro-city-health-facility-management-e7lyaq on 2026-04-28T14:28:13Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'chiro-city-health-facility-management-e7lyaq'
+primary_region = 'cdg'
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
