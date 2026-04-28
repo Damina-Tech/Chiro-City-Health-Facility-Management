@@ -2,7 +2,7 @@
  * Chiro City Health Facilities & HR Management - API client
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://chiro-city-health-facility-management.onrender.com';
 
 function getToken(): string | null {
   return localStorage.getItem('access_token');
