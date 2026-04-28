@@ -1,0 +1,1 @@
+deploy backend to a small VPS/Render/Railway/Fly.io
